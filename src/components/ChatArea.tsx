@@ -221,7 +221,7 @@ const MessageItem = React.memo(({
             isMe 
               ? 'bg-[var(--bubble-me)] text-[var(--bubble-me-text)] rounded-tr-none'
               : isAI 
-                ? 'animate-rgb-border text-text-primary'
+                ? 'bg-[var(--bg-secondary)] border border-[#a855f7]/50 text-text-primary'
                 : 'bg-[var(--bubble-other)] text-[var(--bubble-other-text)] rounded-tl-none'
           }`}
         >
@@ -1812,7 +1812,7 @@ export default function ChatArea() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             className={`flex flex-col max-w-[92%] sm:max-w-[85%] ${lang === 'ar' ? 'items-end self-end' : 'items-start self-start'}`}
           >
-            <div className={`p-2.5 rounded-xl shadow-sm relative ${partner.id === 'hbot-ai' ? 'animate-rgb-border text-text-primary' : 'bg-[var(--bg-tertiary)] text-text-muted'} rounded-tl-none flex items-center gap-2`}>
+            <div className={`p-2.5 rounded-xl shadow-sm relative ${partner.id === 'hbot-ai' ? 'bg-[var(--bg-secondary)] border border-[#a855f7]/50 text-text-primary' : 'bg-[var(--bg-tertiary)] text-text-muted'} rounded-tl-none flex items-center gap-2`}>
               <span className="text-xs italic whitespace-nowrap">{typingUsers[partner.id] === 'recording' ? (lang === 'ar' ? 'يسجل صوتاً...' : 'Recording Voice...') : (lang === 'ar' ? 'يكتب...' : 'Typing...')}</span>
               <div className="flex items-center gap-1 h-3">
                 <motion.div className={`w-1.5 h-1.5 rounded-full ${partner.id === 'hbot-ai' ? 'bg-text-primary' : 'bg-text-muted'}`} animate={{ y: [0, -3, 0] }} transition={{ duration: 0.6, repeat: Infinity, delay: 0 }} />

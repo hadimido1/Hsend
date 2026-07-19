@@ -563,9 +563,7 @@ export default function Sidebar() {
                 {searchResults.map(user => {
                   const isSelected = selectedChats.includes(user.id);
                   return (
-                  <motion.button
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                  <button
                     key={user.id}
                     onClick={(e) => {
                        if (e.currentTarget.dataset.longPressed === 'true') {
@@ -629,7 +627,7 @@ export default function Sidebar() {
                          <span className="text-sm text-text-muted truncate">{user.id === 'hbot-ai' ? (lang === 'ar' ? 'مدعوم بالذكاء الاصطناعي' : 'Powered by AI') : t('sidebar.click_to_chat')}</span>
                       </div>
                     </div>
-                  </motion.button>
+                  </button>
                   );
                 })}
               </div>
@@ -646,16 +644,13 @@ export default function Sidebar() {
       )}
 
       {/* Main Contact List */}
-      <div className={!searchMode && currentTab === 'Chats' ? 'flex-1 overflow-y-auto overscroll-none block' : 'hidden'}>
-         <div className="flex-1 overflow-y-auto overscroll-none">
+      <div className={!searchMode && currentTab === 'Chats' ? 'flex-1 min-h-0 flex flex-col overflow-y-auto overscroll-none relative' : 'hidden'}>
             {sortedUsers.length > 0 ? (
                <div className="flex flex-col pb-20">
                   {sortedUsers.map(user => {
                      const isSelected = selectedChats.includes(user.id);
                      return (
-                      <motion.button
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
+                      <button
                         key={user.id}
                         onClick={(e) => {
                            if (e.currentTarget.dataset.longPressed === 'true') {
@@ -738,7 +733,7 @@ export default function Sidebar() {
                              </div>
                           </div>
                         </div>
-                      </motion.button>
+                      </button>
                      );
                   })}
                </div>
@@ -759,7 +754,6 @@ export default function Sidebar() {
                  </button>
                </div>
             )}
-         </div>
       </div>
 
       <div className={!searchMode && currentTab === 'Calls' ? 'block flex-1 overflow-hidden h-full relative' : 'hidden'}>
