@@ -67,14 +67,14 @@ export default function Sidebar() {
     if (currentTab === tab) return;
     setCurrentTab(tab);
     if (tab === 'Chats') {
-      window.history.pushState(null, '', ' ');
+      window.history.pushState(null, '', window.location.pathname);
     } else {
       window.history.pushState(null, '', `#tab-${tab}`);
     }
   };
 
   useEffect(() => {
-    const handleHash = () => {
+    const handlePopState = () => {
       const hash = window.location.hash;
       
       if (hash.startsWith('#tab-')) {
@@ -92,12 +92,13 @@ export default function Sidebar() {
         setShowAddFriendModal(false);
       }
     };
-    window.addEventListener('hashchange', handleHash);
+    
+    window.addEventListener('popstate', handlePopState);
     
     // Also run once on mount to read initial hash
-    handleHash();
+    handlePopState();
 
-    return () => window.removeEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {
@@ -645,7 +646,7 @@ export default function Sidebar() {
       )}
 
       {/* Main Contact List */}
-      {!searchMode && currentTab === 'Chats' && (
+      <div className={!searchMode && currentTab === 'Chats' ? 'flex-1 overflow-y-auto overscroll-none block' : 'hidden'}>
          <div className="flex-1 overflow-y-auto overscroll-none">
             {sortedUsers.length > 0 ? (
                <div className="flex flex-col pb-20">
@@ -759,17 +760,17 @@ export default function Sidebar() {
                </div>
             )}
          </div>
-      )}
+      </div>
 
-      {!searchMode && currentTab === 'Calls' && (
+      <div className={!searchMode && currentTab === 'Calls' ? 'block flex-1 overflow-hidden h-full relative' : 'hidden'}>
          <RecentCalls selectedCalls={selectedCalls} setSelectedCalls={setSelectedCalls} />
-      )}
-      {!searchMode && currentTab === 'Updates' && (
+      </div>
+      <div className={!searchMode && currentTab === 'Updates' ? 'block flex-1 overflow-hidden h-full relative' : 'hidden'}>
          <Updates />
-      )}
-      {!searchMode && currentTab === 'Communities' && (
+      </div>
+      <div className={!searchMode && currentTab === 'Communities' ? 'block flex-1 overflow-hidden h-full relative' : 'hidden'}>
          <Communities />
-      )}
+      </div>
 
       {/* Floating Action Buttons */}
       {currentTab === 'Chats' && (
@@ -1060,7 +1061,7 @@ export default function Sidebar() {
       
       {/* Add Friend Modal */}
       {showAddFriendModal && userToAdd && (
-        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 ">
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -1138,7 +1139,7 @@ export default function Sidebar() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+            className="fixed inset-0 z-[100] bg-black/60  flex items-center justify-center p-4"
           >
             <motion.div
               initial={{ scale: 0.95, y: 20 }}
@@ -1229,11 +1230,11 @@ export default function Sidebar() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedImage(null)}
-            className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 cursor-zoom-out"
+            className="fixed inset-0 z-[500] bg-black/95  flex flex-col items-center justify-center p-4 cursor-zoom-out"
           >
             <button 
               onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors z-50 backdrop-blur-sm border border-white/10"
+              className="absolute top-4 right-4 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors z-50  border border-white/10"
             >
               <X size={24} />
             </button>
@@ -1254,7 +1255,7 @@ export default function Sidebar() {
       {/* Profile Image Cropper Modal */}
       <AnimatePresence>
         {cropperImage && (
-          <div className="fixed inset-0 z-[600] bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[600] bg-black/80  flex items-center justify-center p-4">
             <motion.div 
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}

@@ -722,7 +722,7 @@ export default function CallOverlay() {
               <div className="flex flex-col items-center gap-2.5">
                 <button 
                   onClick={rejectCall}
-                  className="w-16 h-16 bg-[#ffffff20] backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#ffffff30] transition-colors active:scale-95"
+                  className="w-16 h-16 bg-[#ffffff20]  text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#ffffff30] transition-colors active:scale-95"
                 >
                   <MessageSquare size={26} fill="currentColor" />
                 </button>

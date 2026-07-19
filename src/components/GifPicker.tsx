@@ -138,7 +138,7 @@ const GifPicker: React.FC<GifPickerProps> = ({ onGifSelect, onClose, lang }) => 
                     e.preventDefault();
                     toggleFavoriteSticker(gif.images.fixed_height.url);
                   }}
-                  className={`p-2 rounded-full backdrop-blur-md transition-all pointer-events-auto ${
+                  className={`p-2 rounded-full  transition-all pointer-events-auto ${
                     favorites.includes(gif.images.fixed_height.url) 
                       ? 'bg-[#00a884] text-white opacity-100' 
                       : 'bg-black/40 text-white hover:bg-black/60'
@@ -168,7 +168,7 @@ const GifPicker: React.FC<GifPickerProps> = ({ onGifSelect, onClose, lang }) => 
                     e.stopPropagation();
                     toggleFavoriteSticker(url);
                   }}
-                  className={`absolute top-1 right-1 p-1.5 rounded-full backdrop-blur-md transition-opacity ${
+                  className={`absolute top-1 right-1 p-1.5 rounded-full  transition-opacity ${
                     favorites.includes(url) ? 'bg-[#00a884] text-white opacity-100' : 'bg-black/40 text-white opacity-0 group-hover:opacity-100'
                   }`}
                 >

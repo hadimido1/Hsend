@@ -37,17 +37,17 @@ export default function App() {
 
 
   useEffect(() => {
-    const handleHash = () => {
+    const handlePopState = () => {
       const hash = window.location.hash;
-      if (!hash || hash === '') {
+      if (hash !== '#chat') {
         if (useStore.getState().activeChat) {
            useStore.getState().setActiveChat(null);
         }
       }
     };
-    window.addEventListener('hashchange', handleHash);
+    window.addEventListener('popstate', handlePopState);
     
-    return () => window.removeEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
   useEffect(() => {

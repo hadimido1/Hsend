@@ -66,7 +66,7 @@ const rotateBase64Image = async (base64Str: string): Promise<string> => {
   });
 };
 
-const MessageItem = ({ 
+const MessageItem = React.memo(({ 
   msg, 
   currentUser, 
   partner, 
@@ -325,7 +325,7 @@ const MessageItem = ({
                     e.stopPropagation();
                     toggleFavoriteSticker(msg.content);
                   }}
-                  className="absolute top-2 right-2 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full opacity-0 group-hover/sticker:opacity-100 transition-opacity shadow-lg backdrop-blur-sm"
+                  className="absolute top-2 right-2 p-2 bg-black/40 hover:bg-black/60 text-white rounded-full opacity-0 group-hover/sticker:opacity-100 transition-opacity shadow-lg "
                   title={lang === 'ar' ? 'إضافة للمفضلة' : 'Add to favorites'}
                 >
                   <Heart size={18} />
@@ -372,7 +372,14 @@ const MessageItem = ({
       </motion.div>
     </motion.div>
   );
-}
+}, (prev, next) => {
+  return prev.msg === next.msg &&
+         prev.isSelected === next.isSelected &&
+         prev.lang === next.lang &&
+         (prev.selectedMessages.length > 0) === (next.selectedMessages.length > 0) &&
+         (prev.showMoreEmojis?.msgId === prev.msg.id) === (next.showMoreEmojis?.msgId === next.msg.id) &&
+         (prev.playingAudioId === prev.msg.id) === (next.playingAudioId === next.msg.id);
+});
 
 const isMobile = () => typeof window !== 'undefined' && window.innerWidth < 768;
 
@@ -1878,7 +1885,7 @@ export default function ChatArea() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 onClick={() => { setShowEmojiPicker(false); setShowGifPicker(false); }}
-                className="fixed inset-0 z-[90] bg-black/40 backdrop-blur-[2px] sm:bg-transparent"
+                className="fixed inset-0 z-[90] bg-black/40  sm:bg-transparent"
               />
               
               <motion.div 
@@ -2204,7 +2211,7 @@ export default function ChatArea() {
 
       {/* Forward Modal */}
       {showForwardModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 ">
           <motion.div 
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -2525,7 +2532,7 @@ export default function ChatArea() {
       {/* Add Friend Modal */}
       <AnimatePresence>
         {showAddFriendModal && userToAdd && (
-          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 ">
             <motion.div 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -2603,11 +2610,11 @@ export default function ChatArea() {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setSelectedImage(null)}
-            className="fixed inset-0 z-[500] bg-black/95 backdrop-blur-md flex flex-col items-center justify-center p-4 cursor-zoom-out"
+            className="fixed inset-0 z-[500] bg-black/95  flex flex-col items-center justify-center p-4 cursor-zoom-out"
           >
             <button 
               onClick={() => setSelectedImage(null)}
-              className="absolute top-4 right-4 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors z-50 backdrop-blur-sm border border-white/10"
+              className="absolute top-4 right-4 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full transition-colors z-50  border border-white/10"
             >
               <X size={24} />
             </button>
@@ -2662,7 +2669,7 @@ export default function ChatArea() {
       {/* Full Image Editor Modal */}
       <AnimatePresence>
         {imageEditorOpen && pendingImage && (
-          <div className="fixed inset-0 z-[600] bg-black/95 backdrop-blur-md flex flex-col justify-between overflow-hidden text-white" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
+          <div className="fixed inset-0 z-[600] bg-black/95  flex flex-col justify-between overflow-hidden text-white" dir={lang === 'ar' ? 'rtl' : 'ltr'}>
             
             {/* Header: Controls */}
             <div className="h-16 bg-black/40 border-b border-white/10 px-4 flex items-center justify-between z-50">
@@ -3080,7 +3087,7 @@ export default function ChatArea() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => { setShowRecipientSelector(false); setRecipientSearchText(''); }}
-              className="absolute inset-0 bg-black/85 backdrop-blur-[2px]"
+              className="absolute inset-0 bg-black/85 "
             />
 
             <motion.div
@@ -3224,7 +3231,7 @@ export default function ChatArea() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowTextAddDialog(false)}
-              className="absolute inset-0 bg-black/75 backdrop-blur-[2px]"
+              className="absolute inset-0 bg-black/75 "
             />
             
             <motion.div 
@@ -3289,7 +3296,7 @@ export default function ChatArea() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowDeleteModal(false)}
-              className="absolute inset-0 bg-black/70 backdrop-blur-[1px]"
+              className="absolute inset-0 bg-black/70 "
             />
             
             {/* Modal Box */}

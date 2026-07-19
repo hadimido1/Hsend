@@ -1298,7 +1298,7 @@ export default function Updates() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowAudienceModal(false)}
-              className="absolute inset-0 bg-black/85 backdrop-blur-[2px]"
+              className="absolute inset-0 bg-black/85 "
             />
 
             <motion.div
