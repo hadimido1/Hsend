@@ -703,6 +703,19 @@ export default function ChatArea() {
       const expiresAt = ttl > 0 ? Date.now() + ttl * 60000 : null;
       
       if (partner.id === 'hbot-ai') {
+        const localMsg = {
+          id: msgId,
+          chatId,
+          sender_id: currentUser.id,
+          receiver_id: partner.id,
+          content: base64Audio, 
+          type: 'audio',
+          timestamp: Date.now(),
+          expires_at: expiresAt,
+          status: 'sent'
+        };
+        addMessage(partner.id, localMsg);
+
         const msgData = {
           id: msgId,
           chatId,
@@ -731,6 +744,19 @@ export default function ChatArea() {
         };
         await setDoc(doc(db, 'messages', aiId), aiMsgData);
       } else {
+        const localMsg = {
+          id: msgId,
+          chatId,
+          sender_id: currentUser.id,
+          receiver_id: partner.id,
+          content: base64Audio,
+          type: 'audio',
+          timestamp: Date.now(),
+          expires_at: expiresAt,
+          status: 'waiting'
+        };
+        addMessage(partner.id, localMsg);
+
         const partnerPubKey = await importPublicKey(partner.public_key);
         const encryptedForPartner = await encryptMessage(partnerPubKey, base64Audio);
         
@@ -772,6 +798,19 @@ export default function ChatArea() {
       const expiresAt = ttl > 0 ? Date.now() + ttl * 60000 : null;
 
       if (partner.id === 'hbot-ai') {
+        const localMsg = {
+          id: msgId,
+          chatId,
+          sender_id: currentUser.id,
+          receiver_id: partner.id,
+          content: gifUrl,
+          type: 'image',
+          timestamp: Date.now(),
+          expires_at: expiresAt,
+          status: 'sent'
+        };
+        addMessage(partner.id, localMsg);
+
         const msgData = {
           id: msgId,
           chatId,
@@ -785,6 +824,19 @@ export default function ChatArea() {
         };
         await setDoc(doc(db, 'messages', msgId), msgData);
       } else {
+        const localMsg = {
+          id: msgId,
+          chatId,
+          sender_id: currentUser.id,
+          receiver_id: partner.id,
+          content: gifUrl,
+          type: 'image',
+          timestamp: Date.now(),
+          expires_at: expiresAt,
+          status: 'waiting'
+        };
+        addMessage(partner.id, localMsg);
+
         const partnerPubKey = await importPublicKey(partner.public_key);
         const encryptedForPartner = await encryptMessage(partnerPubKey, gifUrl);
         
@@ -931,6 +983,20 @@ export default function ChatArea() {
       } : null;
       
       if (partner.id === 'hbot-ai') {
+        const localMsg = {
+          id: msgId,
+          chatId,
+          sender_id: currentUser.id,
+          receiver_id: partner.id,
+          content: plainText, 
+          type: 'text',
+          timestamp: Date.now(),
+          expires_at: expiresAt,
+          status: 'sent',
+          reply_to: replyData
+        };
+        addMessage(partner.id, localMsg);
+
         const msgData = {
           id: msgId,
           chatId,
@@ -974,6 +1040,20 @@ export default function ChatArea() {
         };
         await setDoc(doc(db, 'messages', aiId), aiMsgData);
       } else {
+        const localMsg = {
+          id: msgId,
+          chatId,
+          sender_id: currentUser.id,
+          receiver_id: partner.id,
+          content: plainText,
+          type: 'text',
+          timestamp: Date.now(),
+          expires_at: expiresAt,
+          status: 'waiting',
+          reply_to: replyData
+        };
+        addMessage(partner.id, localMsg);
+
         const partnerPubKey = await importPublicKey(partner.public_key);
         const encryptedForPartner = await encryptMessage(partnerPubKey, plainText);
         
@@ -1486,6 +1566,20 @@ export default function ChatArea() {
         const msgId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
         if (recId === 'hbot-ai') {
+          const localMsg = {
+            id: msgId,
+            chatId,
+            sender_id: currentUser.id,
+            receiver_id: recId,
+            content: finalDataUrl,
+            caption: finalCaption,
+            type: 'image',
+            timestamp: Date.now(),
+            expires_at: expiresAt,
+            status: 'sent'
+          };
+          addMessage(recId, localMsg);
+
           const msgData = {
             id: msgId,
             chatId,
@@ -1516,6 +1610,20 @@ export default function ChatArea() {
           };
           await setDoc(doc(db, 'messages', aiId), aiMsgData);
         } else {
+          const localMsg = {
+            id: msgId,
+            chatId,
+            sender_id: currentUser.id,
+            receiver_id: recId,
+            content: finalDataUrl,
+            caption: finalCaption,
+            type: 'image',
+            timestamp: Date.now(),
+            expires_at: expiresAt,
+            status: 'waiting'
+          };
+          addMessage(recId, localMsg);
+
           const partnerPubKey = await importPublicKey(targetUser.public_key);
           const encryptedForPartner = await encryptMessage(partnerPubKey, finalDataUrl);
           
@@ -2334,6 +2442,22 @@ export default function ChatArea() {
                       let finalCaption = msg.caption || '';
 
                       if (targetForwardUserId !== 'hbot-ai') {
+                        // OPTIMISTIC UPDATE
+                        const localMsg = {
+                          id: newMsgId,
+                          chatId: chatId,
+                          sender_id: currentUser.id,
+                          receiver_id: targetForwardUserId,
+                          content: msg.content,
+                          caption: msg.caption || '',
+                          type: msg.type,
+                          timestamp: Date.now(),
+                          expires_at: expiresAt,
+                          status: 'waiting',
+                          forwarded: true
+                        };
+                        addMessage(targetForwardUserId, localMsg);
+
                         // We need to encrypt the content and caption for the target user and ourselves
                         const partnerPubKey = await importPublicKey(targetUser.public_key);
                         const encryptedForPartner = await encryptMessage(partnerPubKey, msg.content);
@@ -2354,6 +2478,22 @@ export default function ChatArea() {
                             forSender: encryptedCaptionSender
                           });
                         }
+                      } else {
+                        // OPTIMISTIC UPDATE for hbot-ai
+                        const localMsg = {
+                          id: newMsgId,
+                          chatId: chatId,
+                          sender_id: currentUser.id,
+                          receiver_id: targetForwardUserId,
+                          content: msg.content,
+                          caption: msg.caption || '',
+                          type: msg.type,
+                          timestamp: Date.now(),
+                          expires_at: expiresAt,
+                          status: 'sent',
+                          forwarded: true
+                        };
+                        addMessage(targetForwardUserId, localMsg);
                       }
 
                       const forwardData = {
