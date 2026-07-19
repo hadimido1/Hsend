@@ -1,10 +1,13 @@
 import React, { useMemo } from 'react';
 import { useStore } from '../lib/store';
-import { Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, Video, Phone as PhoneIcon } from 'lucide-react';
+import { PhoneIncoming, Trash2 } from 'lucide-react';
+import { doc, deleteDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { Phone, PhoneOutgoing, PhoneMissed, Video, Phone as PhoneIcon } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { format } from 'date-fns';
 
-export default function RecentCalls() {
+export default function RecentCalls({ selectedCalls = [], setSelectedCalls = () => {} }: { selectedCalls?: string[], setSelectedCalls?: (calls: string[]) => void }) {
   const { messages, currentUser, users, contacts } = useStore();
   const { lang, t } = useTranslation();
 
@@ -34,14 +37,10 @@ export default function RecentCalls() {
   }, [messages, currentUser?.id]);
 
   return (
-    <div className="flex-1 bg-bg-primary flex flex-col h-full relative">
-      <div className="flex-1 overflow-y-auto flex flex-col">
-      <div className="p-4 pt-6 text-2xl font-bold text-text-primary px-5 pb-2">
-        {lang === 'ar' ? 'المكالمات' : 'Calls'}
-      </div>
-      <div className="px-5 py-2 text-text-primary font-semibold text-lg">
-        {lang === 'ar' ? 'الحديثة' : 'Recent'}
-      </div>
+    <div className="flex-1 bg-bg-primary flex flex-col h-full relative overflow-hidden">
+      <div className="flex-1 overflow-y-auto overscroll-none flex flex-col pb-20 scrollbar-none">
+      
+      
       
       {callLogs.length === 0 ? (
          <div className="flex-1 flex flex-col items-center justify-center p-8 text-text-muted">
@@ -57,7 +56,59 @@ export default function RecentCalls() {
                const isMissed = log.status === 'missed';
                
                return (
-                 <div key={log.id} className="flex items-center px-5 py-3 hover:bg-bg-hover gap-4 transition-colors">
+                 <div 
+                    key={log.id} 
+                    className={`flex items-center px-5 py-3 hover:bg-bg-hover gap-4 transition-colors cursor-pointer ${selectedCalls.includes(log.id) ? 'bg-bg-tertiary' : ''}`}
+                    onClick={(e) => {
+                       if (e.currentTarget.dataset.longPressed === 'true') {
+                          e.currentTarget.dataset.longPressed = 'false';
+                          return;
+                       }
+                       if (selectedCalls.length > 0) {
+                          if (selectedCalls.includes(log.id)) {
+                             setSelectedCalls(selectedCalls.filter(id => id !== log.id));
+                          } else {
+                             setSelectedCalls([...selectedCalls, log.id]);
+                          }
+                       }
+                    }}
+                    onContextMenu={(e) => {
+                       e.preventDefault();
+                       if (!selectedCalls.includes(log.id)) {
+                          setSelectedCalls([...selectedCalls, log.id]);
+                       }
+                    }}
+                    onTouchStart={(e) => {
+                       const target = e.currentTarget;
+                       target.dataset.touchTimer = setTimeout(() => {
+                          target.dataset.longPressed = 'true';
+                          if (!selectedCalls.includes(log.id)) {
+                             setSelectedCalls([...selectedCalls, log.id]);
+                          }
+                       }, 500).toString();
+                    }}
+                    onTouchEnd={(e) => {
+                       clearTimeout(parseInt(e.currentTarget.dataset.touchTimer || '0'));
+                    }}
+                    onTouchMove={(e) => {
+                       clearTimeout(parseInt(e.currentTarget.dataset.touchTimer || '0'));
+                    }}
+                    onMouseDown={(e) => {
+                       const target = e.currentTarget;
+                       target.dataset.mouseTimer = setTimeout(() => {
+                          target.dataset.longPressed = 'true';
+                          if (!selectedCalls.includes(log.id)) {
+                             setSelectedCalls([...selectedCalls, log.id]);
+                          }
+                       }, 500).toString();
+                    }}
+                    onMouseUp={(e) => {
+                       clearTimeout(parseInt(e.currentTarget.dataset.mouseTimer || '0'));
+                    }}
+                    onMouseLeave={(e) => {
+                       clearTimeout(parseInt(e.currentTarget.dataset.mouseTimer || '0'));
+                    }}
+                 >
                     <div className="relative w-12 h-12 shrink-0">
                       <div className="w-full h-full rounded-full flex items-center justify-center text-white text-lg font-bold uppercase shadow-sm overflow-hidden bg-accent-primary">
                         {partner.avatar_url ? (
@@ -74,12 +125,15 @@ export default function RecentCalls() {
                              {contacts[partner.id]?.nickname || partner.name || partner.username}
                           </span>
                           
-                          <button 
-                             onClick={() => useStore.getState().setCallStatus('calling', partner, log.callType)}
-                             className="text-[#00a884] hover:bg-[#00a884]/10 p-2 rounded-full transition-colors ml-2 shrink-0"
-                          >
-                             {log.callType === 'video' ? <Video size={20} /> : <PhoneIcon size={20} />}
-                          </button>
+                          <div className="flex items-center gap-1">
+                            
+                            <button 
+                               onClick={() => useStore.getState().setCallStatus('calling', partner, log.callType)}
+                               className="text-[#00a884] hover:bg-[#00a884]/10 p-2 rounded-full transition-colors shrink-0"
+                            >
+                               {log.callType === 'video' ? <Video size={20} /> : <PhoneIcon size={20} />}
+                            </button>
+                          </div>
                        </div>
                        <div className="flex items-center gap-1.5 text-text-muted text-sm shrink-0">
                           {log.direction === 'outgoing' ? (
@@ -99,12 +153,7 @@ export default function RecentCalls() {
       )}
       
       </div>
-      {/* Floating Action Button for Calls */}
-      <button 
-        className={`absolute bottom-20 ${lang === 'ar' ? 'left-4' : 'right-4'} w-14 h-14 bg-[#00a884] rounded-[16px] flex items-center justify-center text-white shadow-lg hover:bg-opacity-90 transition-transform active:scale-95 z-10`}
-      >
-        <PhoneIcon size={24} fill="currentColor" />
-      </button>
+      
     </div>
   );
 }

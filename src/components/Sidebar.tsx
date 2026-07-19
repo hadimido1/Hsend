@@ -1,16 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore, User } from '../lib/store';
-import { Search, LogOut, User as UserIcon, Settings, Ghost, Menu, Plus, ArrowRight, X, Monitor, Type, Camera, MoreVertical, MessageSquare, Phone as PhoneIcon, Users, Bell, UserPlus, Trash2, Check, Smile, CheckCircle, Pin } from 'lucide-react';
+import { Search, LogOut, Edit2, User as UserIcon, Settings, Ghost, Menu, Plus, ArrowRight, X, Monitor, Type, Camera, MoreVertical, MessageSquare, Phone as PhoneIcon, Users, Bell, UserPlus, Trash2, Check, Smile, CheckCircle, Pin } from 'lucide-react';
 import { logoutGoogle, db } from '../lib/firebase';
 import { collection, query, where, limit, getDocs, updateDoc, doc, onSnapshot, getDoc, deleteDoc } from 'firebase/firestore';
 import { useTranslation } from '../lib/i18n';
 import { motion, AnimatePresence } from 'motion/react';
 import RecentCalls from './RecentCalls';
+import Updates from './Updates';
+import Communities from './Communities';
 
 export default function Sidebar() {
   const { t, lang } = useTranslation();
   const [searchMode, setSearchMode] = useState(false);
   const [selectedChats, setSelectedChats] = useState<string[]>([]);
+  const [selectedCalls, setSelectedCalls] = useState<string[]>([]);
   const [pinnedChats, setPinnedChats] = useState<string[]>(() => {
     try {
       return JSON.parse(localStorage.getItem('pinnedChats') || '[]');
@@ -334,70 +337,81 @@ export default function Sidebar() {
     <div className={`w-full h-full border-${lang === 'ar' ? 'l' : 'r'} border-border-primary flex flex-col bg-bg-primary relative transition-colors duration-300`}>
       
       {/* Header */}
-      {selectedChats.length > 0 ? (
+      {(selectedChats.length > 0 || selectedCalls.length > 0) ? (
         <div className="h-14 flex items-center justify-between px-4 py-2 shrink-0 bg-bg-tertiary border-b border-border-primary animate-in fade-in z-20">
           <div className="flex items-center gap-4">
-             <button onClick={() => setSelectedChats([])} className="p-2 text-text-secondary hover:bg-bg-hover rounded-full transition-colors focus:outline-none">
+             <button onClick={() => { setSelectedChats([]); setSelectedCalls([]); }} className="p-2 text-text-secondary hover:bg-bg-hover rounded-full transition-colors focus:outline-none">
                 <X size={20} />
              </button>
-             <span className="text-lg font-medium text-text-primary">{selectedChats.length}</span>
+             <span className="text-lg font-medium text-text-primary">{selectedChats.length > 0 ? selectedChats.length : selectedCalls.length}</span>
           </div>
           <div className="flex items-center gap-4 text-text-primary">
+             {selectedChats.length > 0 && (
+               <button 
+                  onClick={() => {
+                     // Pin / Unpin
+                     const pinStatus = selectedChats.map(id => pinnedChats.includes(id) ? 'unpin' : 'pin');
+                     const shouldPin = pinStatus.includes('pin');
+                     let newPinned = [...pinnedChats];
+                     if (shouldPin) {
+                        selectedChats.forEach(id => {
+                           if (!newPinned.includes(id)) newPinned.push(id);
+                        });
+                     } else {
+                        newPinned = newPinned.filter(id => !selectedChats.includes(id));
+                     }
+                     setPinnedChats(newPinned);
+                     localStorage.setItem('pinnedChats', JSON.stringify(newPinned));
+                     setSelectedChats([]);
+                  }} 
+                  className="p-2 hover:bg-bg-hover rounded-full transition-colors focus:outline-none"
+               >
+                  <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
+               </button>
+             )}
              <button 
                 onClick={() => {
-                   // Pin / Unpin
-                   const pinStatus = selectedChats.map(id => pinnedChats.includes(id) ? 'unpin' : 'pin');
-                   const shouldPin = pinStatus.includes('pin');
-                   let newPinned = [...pinnedChats];
-                   if (shouldPin) {
-                      selectedChats.forEach(id => {
-                         if (!newPinned.includes(id)) newPinned.push(id);
-                      });
-                   } else {
-                      newPinned = newPinned.filter(id => !selectedChats.includes(id));
+                   if (selectedChats.length > 0) {
+                     // Delete chats
+                     const currentContacts = currentUser.contacts || [];
+                     const newContacts = currentContacts.filter(id => !selectedChats.includes(id));
+                     updateDoc(doc(db, 'users', currentUser.id), { contacts: newContacts }).catch(console.error);
+                     
+                     selectedChats.forEach(async (id) => {
+                        const chatId = currentUser.id < id ? `${currentUser.id}_${id}` : `${id}_${currentUser.id}`;
+                        try {
+                           const q = query(collection(db, 'messages'), where('chatId', '==', chatId));
+                           const snap = await getDocs(q);
+                           for (const d of snap.docs) {
+                              await deleteDoc(d.ref);
+                           }
+                        } catch (e) {
+                           console.error("Error deleting messages for chatId:", chatId, e);
+                        }
+                     });
+                     
+                     const state = useStore.getState();
+                     const newMessages = { ...state.messages };
+                     selectedChats.forEach(id => {
+                        delete newMessages[id];
+                     });
+                     useStore.setState({ messages: newMessages });
+                     
+                     if (selectedChats.includes(state.activeChat || '')) {
+                        state.setActiveChat(null);
+                     }
+                     state.setCurrentUser({ ...currentUser, contacts: newContacts }, state.privateKeyPem!);
+                     setSelectedChats([]);
+                   } else if (selectedCalls.length > 0) {
+                     // Delete calls
+                     selectedCalls.forEach(async (id) => {
+                        try {
+                           await deleteDoc(doc(db, 'messages', id));
+                        } catch (e) { console.error(e); }
+                     });
+                     setSelectedCalls([]);
                    }
-                   setPinnedChats(newPinned);
-                   localStorage.setItem('pinnedChats', JSON.stringify(newPinned));
-                   setSelectedChats([]);
                 }} 
-                className="p-2 hover:bg-bg-hover rounded-full transition-colors focus:outline-none"
-             >
-                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V6h1a2 2 0 0 0 0-4H8a2 2 0 0 0 0 4h1v4.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24Z"></path></svg>
-             </button>
-             <button 
-                onClick={() => {
-                   // Delete
-                   const currentContacts = currentUser.contacts || [];
-                   const newContacts = currentContacts.filter(id => !selectedChats.includes(id));
-                   updateDoc(doc(db, 'users', currentUser.id), { contacts: newContacts }).catch(console.error);
-                   
-                   // Delete messages from Firestore so they don't load again
-                   selectedChats.forEach(async (id) => {
-                      const chatId = currentUser.id < id ? `${currentUser.id}_${id}` : `${id}_${currentUser.id}`;
-                      try {
-                         const q = query(collection(db, 'messages'), where('chatId', '==', chatId));
-                         const snap = await getDocs(q);
-                         for (const d of snap.docs) {
-                            await deleteDoc(d.ref);
-                         }
-                      } catch (e) {
-                         console.error("Error deleting messages for chatId:", chatId, e);
-                      }
-                   });
-                   
-                   const state = useStore.getState();
-                   const newMessages = { ...state.messages };
-                   selectedChats.forEach(id => {
-                      delete newMessages[id];
-                   });
-                   useStore.setState({ messages: newMessages });
-                   
-                   if (selectedChats.includes(state.activeChat || '')) {
-                      state.setActiveChat(null);
-                   }
-                   state.setCurrentUser({ ...currentUser, contacts: newContacts }, state.privateKeyPem!);
-                   setSelectedChats([]);
-                }}
                 className="p-2 hover:bg-bg-hover rounded-full transition-colors focus:outline-none"
              >
                 <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round" className="text-text-secondary"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
@@ -472,7 +486,7 @@ export default function Sidebar() {
             </div>
           </div>
           
-          <div className="flex-1 overflow-y-auto">
+          <div className="flex-1 overflow-y-auto overscroll-none">
             {!searchQuery.trim() ? (
               <div className="flex flex-col pb-20">
                 <h3 className="text-[12px] font-bold text-accent-primary uppercase mb-2 px-4 mt-4">
@@ -612,7 +626,7 @@ export default function Sidebar() {
 
       {/* Main Contact List */}
       {!searchMode && currentTab === 'Chats' && (
-         <div className="flex-1 overflow-y-auto">
+         <div className="flex-1 overflow-y-auto overscroll-none">
             {sortedUsers.length > 0 ? (
                <div className="flex flex-col pb-20">
                   {sortedUsers.map(user => {
@@ -728,18 +742,65 @@ export default function Sidebar() {
       )}
 
       {!searchMode && currentTab === 'Calls' && (
-         <RecentCalls />
+         <RecentCalls selectedCalls={selectedCalls} setSelectedCalls={setSelectedCalls} />
+      )}
+      {!searchMode && currentTab === 'Updates' && (
+         <Updates />
+      )}
+      {!searchMode && currentTab === 'Communities' && (
+         <Communities />
       )}
 
-      {/* Floating Action Button */}
+      {/* Floating Action Buttons */}
       {currentTab === 'Chats' && (
         <button 
           onClick={() => setSearchMode(true)}
-          className={`absolute bottom-20 ${lang === 'ar' ? 'left-4' : 'right-4'} w-14 h-14 bg-accent-primary rounded-[16px] flex items-center justify-center text-black shadow-lg hover:bg-opacity-90 transition-transform active:scale-95 z-10`}
+          className={`absolute bottom-20 ${lang === 'ar' ? 'left-4' : 'right-4'} w-14 h-14 bg-accent-primary rounded-[16px] flex items-center justify-center text-black shadow-lg hover:bg-opacity-90 transition-transform active:scale-95 z-20`}
           title={t('sidebar.add_contact')}
         >
           <MessageSquare size={24} fill="currentColor" />
         </button>
+      )}
+
+      {currentTab === 'Calls' && (
+        <button 
+          className={`absolute bottom-20 ${lang === 'ar' ? 'left-4' : 'right-4'} w-14 h-14 bg-accent-primary rounded-[16px] flex items-center justify-center text-black shadow-lg hover:bg-opacity-90 transition-transform active:scale-95 z-20`}
+        >
+          <PhoneIcon size={24} fill="currentColor" />
+        </button>
+      )}
+
+      {currentTab === 'Updates' && (
+        <div className={`absolute bottom-20 ${lang === 'ar' ? 'left-4' : 'right-4'} flex flex-col gap-4 items-center z-20`}>
+          <button className="w-12 h-12 bg-bg-tertiary border border-border-primary rounded-[16px] flex items-center justify-center text-text-primary shadow-lg hover:bg-opacity-90 transition-transform active:scale-95">
+            <Edit2 size={20} />
+          </button>
+          <button className="w-14 h-14 bg-accent-primary rounded-[16px] flex items-center justify-center text-black shadow-lg hover:bg-opacity-90 transition-transform active:scale-95">
+            <svg 
+              xmlns="http://www.w3.org/2000/svg" 
+              width="24" 
+              height="24" 
+              viewBox="0 0 24 24" 
+              fill="currentColor" 
+              stroke="currentColor" 
+              strokeWidth="2" 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              className="lucide lucide-camera"
+            >
+              <path 
+                d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z" 
+                style={{ color: '#000000' }}
+              />
+              <circle 
+                cx="12" 
+                cy="13" 
+                r="3" 
+                style={{ color: '#00a884' }}
+              />
+            </svg>
+          </button>
+        </div>
       )}
 
       {/* Bottom Navigation */}
@@ -836,7 +897,7 @@ export default function Sidebar() {
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-4 overflow-y-auto flex-1 flex flex-col gap-6">
+              <div className="p-4 overflow-y-auto overscroll-none flex-1 flex flex-col gap-6">
                  {/* Theme */}
                  <div className="flex flex-col gap-3">
                     <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider">{lang === 'ar' ? 'المظهر' : 'Theme'}</h3>
@@ -914,7 +975,7 @@ export default function Sidebar() {
                    </button>
                 </div>
               </div>
-              <div className="p-6 overflow-y-auto flex-1 flex flex-col items-center gap-6">
+              <div className="p-6 overflow-y-auto overscroll-none flex-1 flex flex-col items-center gap-6">
                  {/* Avatar */}
                  <div className="relative group">
                     <div 
@@ -1075,7 +1136,7 @@ export default function Sidebar() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto bg-[var(--bg-secondary)]">
+              <div className="flex-1 overflow-y-auto overscroll-none bg-[var(--bg-secondary)]">
                 {requests.length === 0 ? (
                   <div className="p-12 text-center text-[#8696a0]">
                     <Smile className="mx-auto mb-4 opacity-20" size={64} />
@@ -1192,7 +1253,7 @@ export default function Sidebar() {
                 </button>
               </div>
               
-              <div className="p-6 flex flex-col items-center gap-6 overflow-y-auto">
+              <div className="p-6 flex flex-col items-center gap-6 overflow-y-auto overscroll-none">
                 {/* Crop Viewport */}
                 <div className="relative w-48 h-48 rounded-full border-2 border-dashed border-accent-primary overflow-hidden bg-[var(--bg-secondary)] flex items-center justify-center shadow-inner">
                   {/* Draggable Image inside Circular Frame */}

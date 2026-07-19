@@ -1734,7 +1734,7 @@ export default function ChatArea() {
       <div 
         ref={messagesContainerRef}
         onScroll={handleScroll}
-        className="flex-1 py-4 overflow-y-auto flex flex-col gap-1 sm:gap-2 scrollbar-none relative" 
+        className="flex-1 py-4 overflow-y-auto overscroll-none flex flex-col gap-1 sm:gap-2 scrollbar-none relative" 
         dir={lang === 'ar' ? 'rtl' : 'ltr'}
       >
         <div className="self-center bg-bg-tertiary text-text-muted text-[11px] px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-2 max-w-[85%] text-center leading-relaxed border border-border-primary my-2">
@@ -1792,7 +1792,7 @@ export default function ChatArea() {
               exit={{ opacity: 0, scale: 0.5, y: 10 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
               onClick={scrollToBottom}
-              className="absolute bottom-4 right-4 sm:right-6 z-40 bg-[var(--bg-tertiary)] text-[#00a884] p-2 rounded-full shadow-lg border border-[var(--border-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+              className={`absolute bottom-4 ${lang === "ar" ? "left-4 sm:left-6" : "right-4 sm:right-6"} z-40 bg-[var(--bg-tertiary)] text-[#00a884] p-2 rounded-full shadow-lg border border-[var(--border-primary)] hover:bg-[var(--bg-hover)] transition-colors`}
               title={lang === 'ar' ? 'الذهاب للأسفل' : 'Scroll to bottom'}
             >
               <ChevronDown size={24} />
@@ -2057,7 +2057,7 @@ export default function ChatArea() {
                   }
                 }}
                 placeholder={partner.id === 'hbot-ai' ? (lang === 'ar' ? 'اسأل المساعد الذكي...' : 'Ask AI Assistant...') : (lang === 'ar' ? 'رسالة' : 'Message')}
-                className="flex-1 min-w-0 bg-transparent border-none outline-none text-[16px] py-2 px-1 text-text-primary placeholder-[#8696a0] resize-none max-h-32 overflow-y-auto scrollbar-none"
+                className="flex-1 min-w-0 bg-transparent border-none outline-none text-[16px] py-2 px-1 text-text-primary placeholder-[#8696a0] resize-none max-h-32 overflow-y-auto overscroll-none scrollbar-none"
                 rows={1}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && !e.shiftKey && !isMobile()) {
@@ -2184,7 +2184,7 @@ export default function ChatArea() {
               </button>
             </div>
 
-            <div className="max-h-[300px] overflow-y-auto p-2">
+            <div className="max-h-[300px] overflow-y-auto overscroll-none p-2">
               {Object.values(users).filter(u => u.id !== currentUser?.id && (contacts[u.id] || u.id === 'hbot-ai')).map(user => (
                 <button
                   key={user.id}
@@ -2304,7 +2304,7 @@ export default function ChatArea() {
              </button>
              <h1 className="text-xl font-bold text-text-primary">Contact Info</h1>
            </div>
-           <div className="flex-1 overflow-y-auto p-6 flex flex-col items-center">
+           <div className="flex-1 overflow-y-auto overscroll-none p-6 flex flex-col items-center">
              <div 
                onClick={() => partner.avatar_url && setSelectedImage(partner.avatar_url)}
                className={`w-32 h-32 shrink-0 rounded-full bg-accent-primary flex items-center justify-center text-white text-4xl font-bold uppercase overflow-hidden mb-4 ${partner.avatar_url ? 'cursor-zoom-in hover:brightness-90 transition-all' : ''}`}
@@ -2724,7 +2724,7 @@ export default function ChatArea() {
               
               {/* Optional Inline Emoji List if mode === emoji */}
               {editorMode === 'emoji' && (
-                <div className="absolute top-4 inset-x-4 bg-[var(--bg-secondary)] border border-[var(--border-primary)] p-3 rounded-2xl flex flex-wrap gap-3 justify-center z-50 shadow-2xl max-h-32 overflow-y-auto">
+                <div className="absolute top-4 inset-x-4 bg-[var(--bg-secondary)] border border-[var(--border-primary)] p-3 rounded-2xl flex flex-wrap gap-3 justify-center z-50 shadow-2xl max-h-32 overflow-y-auto overscroll-none">
                   {['😀','😍','😂','👍','🔥','❤️','🙌','👏','🎉','✨','🚀','💡','💬','⭐','⚡','🧁','🍕','🍟','🎈','🎁'].map(em => (
                     <button 
                       key={em} 
