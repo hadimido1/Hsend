@@ -5,7 +5,7 @@ import GifPicker from './GifPicker';
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore, Message } from '../lib/store';
 import { playSound, NOTIFICATION_SOUNDS, RINGTONE_SOUNDS } from '../lib/sounds';
-import { Send, Phone, Video, Info, Lock, Timer, ArrowRight, Mic, Smile, Paperclip, Camera as CameraIcon, Check, CheckCheck, Trash2, Reply, Forward, X, Copy, Sticker, Heart, Pencil, ChevronDown, ChevronUp, Keyboard, Search, MoreVertical, Image as ImageIcon, Ban, Download, Crop, Palette, Type, RotateCw, RotateCcw, Bell } from 'lucide-react';
+import { Send, PhoneMissed, Phone, Video, Info, Lock, Timer, ArrowRight, Mic, Smile, Paperclip, Camera as CameraIcon, Check, CheckCheck, Trash2, Reply, Forward, X, Copy, Sticker, Heart, Pencil, ChevronDown, ChevronUp, Keyboard, Search, MoreVertical, Image as ImageIcon, Ban, Download, Crop, Palette, Type, RotateCw, RotateCcw, Bell } from 'lucide-react';
 import { deleteDoc, collection, query, where, orderBy, onSnapshot, setDoc, doc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
 import { socket } from '../lib/socket';
 import { db } from '../lib/firebase';
@@ -118,9 +118,10 @@ const MessageItem = ({
   };
 
   return (
-    <div 
+    <motion.div 
+      layout
       id={`msg-${msg.id}`}
-      className={`w-full flex relative transition-colors duration-200 ${isSelected ? 'bg-[#005c4b]/30' : ''} ${justifyClass} py-0.5 px-3 sm:px-6 group`}
+      className={`w-full flex relative transition-colors duration-300 ${isSelected ? 'bg-[#005c4b]/40' : ''} ${justifyClass} py-0.5 px-3 sm:px-6 group`}
       onClick={() => {
          if (selectedMessages.length > 0) {
             playSound('click');
@@ -128,6 +129,19 @@ const MessageItem = ({
          }
       }}
     >
+      <AnimatePresence>
+        {isSelected && (
+           <motion.div
+             initial={{ scale: 0, opacity: 0 }}
+             animate={{ scale: 1, opacity: 1 }}
+             exit={{ scale: 0, opacity: 0 }}
+             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+             className={`absolute top-1/2 -translate-y-1/2 ${lang === 'ar' ? 'right-2 sm:right-6' : 'left-2 sm:left-6'} w-6 h-6 rounded-full bg-[#00a884] flex items-center justify-center text-white shadow-md z-20 pointer-events-none`}
+           >
+             <Check size={16} strokeWidth={3} />
+           </motion.div>
+        )}
+      </AnimatePresence>
       {/* Swipe Background Icon */}
       <motion.div 
         style={{ opacity: iconOpacity, scale: iconScale, x: iconX }}
@@ -202,7 +216,7 @@ const MessageItem = ({
         className={`flex flex-col max-w-[92%] sm:max-w-[85%] relative z-10`}
       >
         <div 
-          className={`p-2.5 rounded-xl shadow-sm relative w-fit max-w-full min-w-0 transition-all ${isSelected ? 'scale-[1.02]' : ''} ${
+          className={`p-2.5 rounded-xl shadow-sm relative w-fit max-w-full min-w-0 transition-all ${isSelected ? 'scale-[0.98]' : ''} ${
             isMe 
               ? 'bg-[var(--bubble-me)] text-[var(--bubble-me-text)] rounded-tr-none'
               : isAI 
@@ -370,7 +384,7 @@ const MessageItem = ({
           </div>
         )}
       </motion.div>
-    </div>
+    </motion.div>
   );
 }
 

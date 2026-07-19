@@ -140,4 +140,5 @@ input, textarea, [contenteditable="true"] {
 .overflow-y-auto {
   transform: translateZ(0);
   will-change: scroll-position;
+  overscroll-behavior-y: auto;
 }

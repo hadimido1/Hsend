@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform } from 'motion/react';
 import { useStore, User } from '../lib/store';
 import { socket } from '../lib/socket';
-import { Phone, PhoneOff, PhoneOff, MessageSquare, Video, VideoOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { Phone, PhoneOff, MessageSquare, Video, VideoOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { db } from '../lib/firebase';
 import { doc, setDoc, onSnapshot, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
