@@ -12,7 +12,7 @@ export default defineConfig(() => {
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: 'auto',
-        includeAssets: ['hsend_logo_v3.svg'],
+        includeAssets: ['HSEND_LOGO.png'],
         manifest: {
           name: 'HiSEND',
           short_name: 'HiSEND',
@@ -23,26 +23,23 @@ export default defineConfig(() => {
           orientation: 'portrait-primary',
           icons: [
             {
-              src: '/hsend_logo_v3.svg',
+              src: '/HSEND_LOGO.png',
               sizes: '192x192',
-              type: 'image/svg+xml'
+              type: 'image/png'
             },
             {
-              src: '/hsend_logo_v3.svg',
+              src: '/HSEND_LOGO.png',
               sizes: '512x512',
-              type: 'image/svg+xml'
-            },
-            {
-              src: '/hsend_logo_v3.svg',
-              sizes: '512x512',
-              type: 'image/svg+xml',
-              purpose: 'any maskable'
+              type: 'image/png',
+              purpose: 'any'
             }
           ]
         },
         workbox: {
           globPatterns: ['**/*.{js,css,html,png,svg,woff2,ico}'],
-          maximumFileSizeToCacheInBytes: 5000000 // 5 MB
+          maximumFileSizeToCacheInBytes: 5000000, // 5 MB
+          cleanupOutdatedCaches: true,
+          sourcemap: false
         }
       })
     ],

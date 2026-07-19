@@ -1,5 +1,4 @@
 import { create } from 'zustand';
-import hbotAvatar from '../assets/images/regenerated_image_1784418235520.jpg';
 
 export interface User {
   id: string;
@@ -87,7 +86,7 @@ export const HBOT_USER: User = {
   username: 'ai_assistant',
   name: 'HiSEND',
   public_key: 'hbot-public-key',
-  avatar_url: hbotAvatar
+  avatar_url: '/HSEND_LOGO.png'
 };
 
 export const useStore = create<ChatState>((set) => ({
