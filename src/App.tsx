@@ -66,21 +66,27 @@ export default function App() {
         where('receiver_id', '==', currentUser.id)
       );
       
-      const unsubscribe = onSnapshot(q, async (snapshot) => {
+      const q2 = query(
+        collection(db, 'messages'), 
+        where('sender_id', '==', currentUser.id)
+      );
+
+      const handleSnapshot = async (snapshot: any) => {
         const privKey = await importPrivateKey(privateKeyPem);
         
-        snapshot.docChanges().forEach(async (change) => {
+        snapshot.docChanges().forEach(async (change: any) => {
           if (change.type === 'added' || change.type === 'modified') {
             const data = change.doc.data() as any;
-            if (data.status === 'read') return;
-
+            
             if (data.type === 'call_signal') {
-              deleteDoc(change.doc.ref).catch(() => {});
-              window.dispatchEvent(new CustomEvent('call_signal_received', { detail: data }));
+              if (data.receiver_id === currentUser.id) {
+                deleteDoc(change.doc.ref).catch(() => {});
+                window.dispatchEvent(new CustomEvent('call_signal_received', { detail: data }));
+              }
               return;
             }
 
-            const partnerId = data.sender_id;
+            const partnerId = data.sender_id === currentUser.id ? data.receiver_id : data.sender_id;
             if (useStore.getState().blocked.includes(partnerId)) return;
             
             // Skip if it's already in the active chat (handled by ChatArea)
@@ -103,7 +109,15 @@ export default function App() {
               let encryptedContent = data.content;
               try {
                 const parsed = JSON.parse(data.content);
-                if (parsed.forReceiver) encryptedContent = parsed.forReceiver;
+                // If we are the sender, we need to decrypt our own message using forSender (if it exists)
+                // BUT wait! Messages are encrypted with the receiver's public key!
+                // Actually, the app probably encrypts it for both or just uses forReceiver.
+                // Let's see how ChatArea sends it.
+                if (data.sender_id === currentUser.id && parsed.forSender) {
+                   encryptedContent = parsed.forSender;
+                } else if (data.receiver_id === currentUser.id && parsed.forReceiver) {
+                   encryptedContent = parsed.forReceiver;
+                }
               } catch (e) {}
               
               const content = await decryptMessage(privKey, encryptedContent);
@@ -116,13 +130,13 @@ export default function App() {
               
               addMessage(partnerId, { ...data, content, timestamp: ts });
               
-              if (data.sender_id !== currentUser?.id) {
+              if (data.sender_id !== currentUser?.id && data.status !== 'read') {
                 const prefs = useStore.getState().friendPreferences[partnerId];
                 playSound('receive', prefs?.notificationSound);
               }
               
               // Automatically add back to main list (home screen) on received message
-              if (currentUser && partnerId !== 'hbot-ai') {
+              if (currentUser && partnerId !== 'hbot-ai' && data.sender_id !== currentUser.id) {
                 const activeContacts = currentUser.contacts || [];
                 if (!activeContacts.includes(partnerId)) {
                   const newContacts = [...activeContacts, partnerId];
@@ -134,9 +148,15 @@ export default function App() {
             }
           }
         });
-      });
+      };
+
+      const unsubscribe = onSnapshot(q, handleSnapshot);
+      const unsubscribe2 = onSnapshot(q2, handleSnapshot);
       
-      return () => unsubscribe();
+      return () => {
+        unsubscribe();
+        unsubscribe2();
+      };
     }
   }, [currentUser, privateKeyPem]);
 
@@ -167,8 +187,8 @@ export default function App() {
           const userData = docSnap.data() as any;
           const state = useStore.getState();
           state.setCurrentUser({ ...state.currentUser, ...userData }, state.privateKeyPem!);
-        } else {
-          console.log("User record not found in Firestore. Logging out...");
+        } else if (!docSnap.metadata.fromCache) {
+          console.log("User record not found in Firestore on server. Logging out...");
           logoutGoogle().then(() => {
              useStore.getState().logout();
           });

@@ -22,6 +22,7 @@ export default function CallOverlay() {
   const [swapPiP, setSwapPiP] = useState(false);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [callDuration, setCallDuration] = useState(0);
+  const [isAnswering, setIsAnswering] = useState(false);
   const callDurationRef = useRef(0);
 
   useEffect(() => {
@@ -377,6 +378,9 @@ export default function CallOverlay() {
       console.error(e);
       alert("Microphone/Camera access denied. Please allow permissions or open the app in a new tab to make calls.");
       setCallStatus('idle');
+      } finally {
+        setIsAnswering(false);
+      }
     }
   };
 
@@ -389,7 +393,7 @@ export default function CallOverlay() {
   const answerCall = async () => {
     if (!incomingCallData || !currentUser) return;
     try {
-      const incomingCallType = incomingCallData.callerInfo?.call_type || 'video';
+      setIsAnswering(true); const incomingCallType = incomingCallData.callerInfo?.call_type || 'video';
       const s = await getMediaStream(incomingCallType, facingMode);
       setStream(s);
       const peer = createPeer(s, incomingCallData.from);
@@ -418,9 +422,10 @@ export default function CallOverlay() {
       setCallStatus('connected');
 
     } catch(e) {
-      console.error(e);
       alert("Microphone/Camera access denied. Please allow permissions or open the app in a new tab to answer calls.");
       rejectCall();
+    } finally {
+      setIsAnswering(false);
     }
   };
 
@@ -705,16 +710,20 @@ export default function CallOverlay() {
                   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="-mt-4"><polyline points="18 15 12 9 6 15"></polyline></svg>
                 </motion.div>
                 <motion.div 
-                  drag="y"
+                  drag={!isAnswering ? "y" : false}
                   dragConstraints={{ top: -120, bottom: 0 }}
                   dragElastic={0.2}
                   onDragEnd={(e, info) => {
-                     if (info.offset.y < -50) answerCall();
+                     if (info.offset.y < -50 && !isAnswering) answerCall();
                   }}
                   className="w-18 h-18 bg-[#4cd964] text-white rounded-full flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing relative p-4"
                   title={lang === 'ar' ? 'اسحب للأعلى للرد' : 'Swipe up to accept'}
                 >
-                  {incomingCallData.callerInfo?.call_type === 'video' ? <Video size={32} fill="currentColor" /> : <Phone size={32} fill="currentColor" />}
+                  {isAnswering ? (
+                    <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    incomingCallData.callerInfo?.call_type === 'video' ? <Video size={32} fill="currentColor" /> : <Phone size={32} fill="currentColor" />
+                  )}
                 </motion.div>
                 <span className="text-gray-300 text-[13px] font-medium mt-3 tracking-wide">{lang === 'ar' ? 'اسحب للقبول' : 'Swipe up to accept'}</span>
               </div>
