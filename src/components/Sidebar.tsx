@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore, User } from '../lib/store';
-import { Search, LogOut, Edit2, User as UserIcon, Settings, Ghost, Menu, Plus, ArrowRight, X, Monitor, Type, Camera, MoreVertical, MessageSquare, Phone as PhoneIcon, Users, Bell, UserPlus, Trash2, Check, Smile, CheckCircle, Pin } from 'lucide-react';
+import { Search, LogOut, Edit2, User as UserIcon, Settings, Ghost, Menu, Plus, ArrowRight, X, Monitor, Type, Camera, Mic, MoreVertical, MessageSquare, Phone as PhoneIcon, Users, Bell, UserPlus, Trash2, Check, Smile, CheckCircle, Pin } from 'lucide-react';
 import { logoutGoogle, db } from '../lib/firebase';
 import { collection, query, where, limit, getDocs, updateDoc, doc, onSnapshot, getDoc, deleteDoc } from 'firebase/firestore';
 import { useTranslation } from '../lib/i18n';
@@ -691,12 +691,12 @@ export default function Sidebar() {
                             </span>
                           </div>
                           <div className="flex items-center justify-between">
-                             <span className="text-sm text-text-muted truncate">
+                             <span className="text-sm text-text-muted truncate flex items-center gap-1">
                                {(() => {
                                  const msgs = messages[user.id] || [];
                                  if (msgs.length === 0) return user.id === 'hbot-ai' ? (lang === 'ar' ? 'مدعوم بالذكاء الاصطناعي' : 'Powered by AI') : t('sidebar.click_to_chat');
                                  const last = msgs[msgs.length - 1];
-                                 return last.type === 'image' ? '📷 Image' : last.type === 'audio' ? '🎤 Audio' : last.content;
+                                 return last.type === 'image' ? <><Camera size={12}/> {lang === 'ar' ? 'صورة' : 'Image'}</> : last.type === 'audio' ? <><Mic size={12}/> {lang === 'ar' ? 'رسالة صوتية' : 'Audio'}</> : last.content;
                                })()}
                              </span>
                              <div className="flex items-center gap-2">

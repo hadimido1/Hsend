@@ -237,9 +237,9 @@ const MessageItem = ({
               }}
             >
               <span className="text-[#00a884] text-[10px] font-bold">{msg.reply_to.sender_name}</span>
-              <p className="text-text-muted text-xs truncate max-w-[200px]">
-                {msg.reply_to.type === 'image' ? (lang === 'ar' ? '📷 صورة' : '📷 Image') : 
-                 msg.reply_to.type === 'audio' ? (lang === 'ar' ? '🎤 رسالة صوتية' : '🎤 Audio message') : 
+              <p className="text-text-muted text-xs truncate max-w-[200px] flex items-center gap-1">
+                {msg.reply_to.type === 'image' ? (lang === 'ar' ? <><CameraIcon size={12}/> صورة</> : <><CameraIcon size={12}/> Image</>) : 
+                 msg.reply_to.type === 'audio' ? (lang === 'ar' ? <><Mic size={12}/> رسالة صوتية</> : <><Mic size={12}/> Audio message</>) : 
                  msg.reply_to.content}
               </p>
             </div>
@@ -1997,9 +1997,9 @@ export default function ChatArea() {
               <p className="text-[#00a884] text-xs font-bold mb-0.5">
                 {replyingTo.sender_id === currentUser?.id ? (lang === 'ar' ? 'أنت' : 'You') : (contacts[replyingTo.sender_id]?.nickname || partner.name || partner.username)}
               </p>
-              <p className="text-text-muted text-sm truncate">
-                {replyingTo.type === 'image' ? (lang === 'ar' ? '📷 صورة' : '📷 Image') : 
-                 replyingTo.type === 'audio' ? (lang === 'ar' ? '🎤 رسالة صوتية' : '🎤 Audio message') : 
+              <p className="text-text-muted text-sm truncate flex items-center gap-1">
+                {replyingTo.type === 'image' ? (lang === 'ar' ? <><CameraIcon size={12}/> صورة</> : <><CameraIcon size={12}/> Image</>) : 
+                 replyingTo.type === 'audio' ? (lang === 'ar' ? <><Mic size={12}/> رسالة صوتية</> : <><Mic size={12}/> Audio message</>) : 
                  (() => {
                     try {
                       const parsed = JSON.parse(replyingTo.content);

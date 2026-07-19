@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Edit2, Plus, ArrowLeft, RotateCw, Type, Smile, Undo, Send, Trash2, X, Eye, Globe } from 'lucide-react';
+import { Camera, Edit2, Plus, ArrowLeft, RotateCw, Type, Smile, Undo, Send, Trash2, X, Eye, Globe, Users, UserX, UserCheck, Megaphone } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { useTranslation } from '../lib/i18n';
 import { db } from '../lib/firebase';
@@ -502,20 +502,36 @@ export default function Updates() {
     img.src = editingImage;
     img.onload = async () => {
       const canvas = document.createElement('canvas');
-      canvas.width = img.naturalWidth;
-      canvas.height = img.naturalHeight;
+      
+      // Calculate scaled dimensions to keep base64 under Firestore 1MB limit
+      const MAX_SIZE = 800;
+      let targetWidth = img.naturalWidth;
+      let targetHeight = img.naturalHeight;
+      
+      if (targetWidth > MAX_SIZE || targetHeight > MAX_SIZE) {
+        if (targetWidth > targetHeight) {
+          targetHeight = (MAX_SIZE / targetWidth) * targetHeight;
+          targetWidth = MAX_SIZE;
+        } else {
+          targetWidth = (MAX_SIZE / targetHeight) * targetWidth;
+          targetHeight = MAX_SIZE;
+        }
+      }
+
+      canvas.width = targetWidth;
+      canvas.height = targetHeight;
       const ctx = canvas.getContext('2d');
       if (!ctx) {
         setIsSubmitting(false);
         return;
       }
       
-      // Draw background image
-      ctx.drawImage(img, 0, 0);
+      // Draw background image scaled down
+      ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
       
-      // Scale ratios for drawings/overlays to actual natural pixel coordinates
-      const scaleX = img.naturalWidth / (canvasRef.current?.width || 1);
-      const scaleY = img.naturalHeight / (canvasRef.current?.height || 1);
+      // Scale ratios for drawings/overlays to actual canvas pixel coordinates
+      const scaleX = targetWidth / (canvasRef.current?.width || 1);
+      const scaleY = targetHeight / (canvasRef.current?.height || 1);
       
       // Draw freehand drawings
       paths.forEach(p => {
@@ -534,8 +550,8 @@ export default function Updates() {
       
       // Draw overlays (text or emojis)
       overlays.forEach(o => {
-        const itemX = (o.x / 100) * img.naturalWidth;
-        const itemY = (o.y / 100) * img.naturalHeight;
+        const itemX = (o.x / 100) * targetWidth;
+        const itemY = (o.y / 100) * targetHeight;
         
         ctx.save();
         const fontSize = o.size * scaleX;
@@ -840,7 +856,7 @@ export default function Updates() {
             <h2 className="text-xl font-bold text-text-primary">{lang === 'ar' ? 'القنوات' : 'Channels'}</h2>
           </div>
           <div className="flex flex-col items-center justify-center p-8 bg-bg-secondary/40 border border-border-primary/50 rounded-2xl text-text-muted text-center gap-3">
-            <span className="text-3xl opacity-60">📢</span>
+            <Megaphone className="w-8 h-8 opacity-60" />
             <p className="text-sm font-medium text-text-secondary">
               {lang === 'ar' ? 'لا توجد قنوات لمتابعتها بعد' : 'No channels to follow yet'}
             </p>
@@ -897,15 +913,6 @@ export default function Updates() {
                   <Type size={20} />
                 </button>
 
-                {/* Emoji overlay button */}
-                <button 
-                  onClick={() => setEmojiPickerOpen(!emojiPickerOpen)} 
-                  className="w-10 h-10 rounded-full flex items-center justify-center hover:bg-zinc-800 text-white"
-                  title="Add Emoji"
-                >
-                  <Smile size={20} />
-                </button>
-
                 {/* Undo Button */}
                 <button 
                   onClick={() => setPaths(prev => prev.slice(0, -1))} 
@@ -940,21 +947,6 @@ export default function Updates() {
                     className={`w-7 h-7 rounded-full border-2 transition-transform ${brushColor === color ? 'border-white scale-110 shadow-md' : 'border-transparent'}`}
                     style={{ backgroundColor: color }}
                   />
-                ))}
-              </div>
-            )}
-
-            {/* Quick Emojis Grid Overlay (popup) */}
-            {emojiPickerOpen && (
-              <div className="bg-zinc-900/95 border-b border-zinc-800 p-3 grid grid-cols-8 gap-3 justify-items-center shrink-0 z-20">
-                {['❤️', '😂', '😍', '👍', '🔥', '😭', '🙌', '👏', '🙏', '🎉', '🌟', '😎', '😜', '👻', '🍕', '🍔'].map(emoji => (
-                  <button
-                    key={emoji}
-                    onClick={() => handleAddEmojiOverlay(emoji)}
-                    className="text-2xl hover:scale-125 transition-transform active:scale-95 p-1"
-                  >
-                    {emoji}
-                  </button>
                 ))}
               </div>
             )}
@@ -1235,22 +1227,6 @@ export default function Updates() {
                 </div>
               )}
 
-              {/* WhatsApp Quick Reactions Panel */}
-              <div className="flex justify-around items-center max-w-sm mx-auto w-full py-1 bg-white/5 rounded-2xl border border-white/10">
-                {['👍', '❤️', '😂', '😮', '😢', '🙏'].map(emoji => (
-                  <button
-                    key={emoji}
-                    onClick={() => {
-                      setViewerReplyText(prev => prev + emoji);
-                      // Visual confirmation animation
-                    }}
-                    className="text-2xl hover:scale-130 active:scale-95 transition-transform p-1.5"
-                  >
-                    {emoji}
-                  </button>
-                ))}
-              </div>
-
               {/* Story Swipe up to Reply controls */}
               <div className="flex gap-2 items-center max-w-md mx-auto w-full">
                 <input
@@ -1328,8 +1304,8 @@ export default function Updates() {
                   onClick={() => setAudienceType('contacts')}
                   className="flex items-center gap-4 px-5 py-3.5 hover:bg-zinc-800/50 cursor-pointer transition-colors"
                 >
-                  <div className="w-11 h-11 rounded-full bg-zinc-800 flex items-center justify-center text-xl shrink-0">
-                    👥
+                  <div className="w-11 h-11 rounded-full bg-zinc-800 flex items-center justify-center shrink-0 text-zinc-300">
+                    <Users className="w-5 h-5" />
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-semibold text-zinc-100">
@@ -1356,8 +1332,8 @@ export default function Updates() {
                   }}
                   className="flex items-center gap-4 px-5 py-3.5 hover:bg-zinc-800/50 cursor-pointer transition-colors"
                 >
-                  <div className="w-11 h-11 rounded-full bg-red-950/50 border border-red-900/30 flex items-center justify-center text-xl shrink-0 text-red-400">
-                    👤❌
+                  <div className="w-11 h-11 rounded-full bg-red-950/50 border border-red-900/30 flex items-center justify-center shrink-0 text-red-400">
+                    <UserX className="w-5 h-5" />
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-semibold text-zinc-100">
@@ -1386,8 +1362,8 @@ export default function Updates() {
                   }}
                   className="flex items-center gap-4 px-5 py-3.5 hover:bg-zinc-800/50 cursor-pointer transition-colors"
                 >
-                  <div className="w-11 h-11 rounded-full bg-[#00a884]/10 border border-[#00a884]/20 flex items-center justify-center text-xl shrink-0 text-[#00a884]">
-                    👤✅
+                  <div className="w-11 h-11 rounded-full bg-[#00a884]/10 border border-[#00a884]/20 flex items-center justify-center shrink-0 text-[#00a884]">
+                    <UserCheck className="w-5 h-5" />
                   </div>
                   <div className="flex-1">
                     <div className="text-sm font-semibold text-zinc-100">
