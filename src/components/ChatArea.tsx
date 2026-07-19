@@ -5,7 +5,7 @@ import GifPicker from './GifPicker';
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore, Message } from '../lib/store';
 import { playSound, NOTIFICATION_SOUNDS, RINGTONE_SOUNDS } from '../lib/sounds';
-import { Send, PhoneMissed, Phone, Video, Info, Lock, Timer, ArrowRight, Mic, Smile, Paperclip, Camera as CameraIcon, Check, CheckCheck, Trash2, Reply, Forward, X, Copy, Sticker, Heart, Pencil, ChevronDown, ChevronUp, Keyboard, Search, MoreVertical, Image as ImageIcon, Ban, Download, Crop, Palette, Type, RotateCw, RotateCcw, Bell, Users, Clock } from 'lucide-react';
+import { Send, PhoneMissed, Phone, Video, Info, Lock, Timer, ArrowRight, Mic, Smile, Paperclip, Camera as CameraIcon, Check, CheckCheck, Trash2, Reply, Forward, X, Copy, Sticker, Heart, Pencil, ChevronDown, ChevronUp, Keyboard, Search, MoreVertical, Image as ImageIcon, Ban, Download, Crop, Palette, Type, RotateCw, RotateCcw, Bell, Users, Clock, ShieldAlert } from 'lucide-react';
 import { deleteDoc, collection, query, where, orderBy, onSnapshot, setDoc, doc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
 import { socket } from '../lib/socket';
 import { db } from '../lib/firebase';
@@ -1626,6 +1626,46 @@ export default function ChatArea() {
       document.body.removeChild(link);
     }
   };
+
+  if (activeChat && !partner) {
+    return (
+      <div className="flex-1 flex flex-col bg-bg-primary text-text-muted" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }}>
+        {/* Header with back button */}
+        <div className="h-16 flex items-center px-4 bg-bg-secondary border-b border-border-primary">
+          <button 
+            onClick={() => useStore.getState().setActiveChat(null)} 
+            className="p-2 mr-2 hover:bg-bg-hover rounded-full text-text-primary transition-colors focus:outline-none"
+          >
+            <ArrowRight size={24} className={`transform ${lang === 'ar' ? '' : 'rotate-180'}`} />
+          </button>
+          <span className="font-medium text-text-primary">
+            {lang === 'ar' ? 'محادثة غير متوفرة حالياً' : 'Chat Currently Unavailable'}
+          </span>
+        </div>
+        
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col items-center justify-center p-4">
+          <div className="w-16 h-16 rounded-full bg-bg-tertiary flex items-center justify-center mb-4">
+            <ShieldAlert className="w-8 h-8 text-text-muted animate-pulse" />
+          </div>
+          <h2 className="text-xl font-medium text-text-primary mb-2 text-center">
+            {lang === 'ar' ? 'فشل تحميل بيانات المستخدم' : 'Failed to load user data'}
+          </h2>
+          <p className="max-w-xs text-center text-sm leading-relaxed mb-6">
+            {lang === 'ar' 
+              ? 'يبدو أنك غير متصل بالإنترنت ولم يتم حفظ بيانات هذا المستخدم مؤقتاً في جهازك.' 
+              : 'It seems you are offline and this user\'s data is not cached on your device.'}
+          </p>
+          <button
+            onClick={() => useStore.getState().setActiveChat(null)}
+            className="px-6 py-2.5 bg-accent-primary hover:bg-opacity-90 text-white rounded-xl font-medium transition-colors shadow-lg"
+          >
+            {lang === 'ar' ? 'العودة للمحادثات' : 'Back to Chats'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!partner) {
     return (
