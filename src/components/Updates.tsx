@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Camera, Edit2, Plus, ArrowLeft, RotateCw, Type, Smile, Undo, Send, Trash2, X, Eye } from 'lucide-react';
+import { Camera, Edit2, Plus, ArrowLeft, RotateCw, Type, Smile, Undo, Send, Trash2, X, Eye, Globe } from 'lucide-react';
 import { useStore } from '../lib/store';
 import { useTranslation } from '../lib/i18n';
 import { db } from '../lib/firebase';
@@ -100,6 +100,18 @@ export function SegmentedRing({ count, viewed, size = 64 }: { count: number; vie
   );
 }
 
+// Helper to parse any status timestamp format (number, Timestamp, Date, etc.) safely
+const getStatusTimestamp = (s: any): number => {
+  if (!s) return 0;
+  const ts = s.timestamp;
+  if (!ts) return 0;
+  if (typeof ts === 'number') return ts;
+  if (typeof ts.toMillis === 'function') return ts.toMillis();
+  if (typeof ts.toDate === 'function') return ts.toDate().getTime();
+  if (ts.seconds) return ts.seconds * 1000;
+  return Number(ts) || 0;
+};
+
 // ----------------------------------------------------
 // Main Updates Component
 // ----------------------------------------------------
@@ -172,11 +184,17 @@ export default function Updates() {
   // Subscribe to real statuses from Firestore
   // ----------------------------------------------------
   useEffect(() => {
-    const q = query(collection(db, 'statuses'), orderBy('timestamp', 'asc'));
+    const q = query(collection(db, 'statuses'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const list: any[] = [];
       snapshot.forEach((doc) => {
         list.push({ id: doc.id, ...doc.data() });
+      });
+      // Safe sorting in-memory to prevent missing fields or index issues
+      list.sort((a, b) => {
+        const tA = getStatusTimestamp(a);
+        const tB = getStatusTimestamp(b);
+        return tA - tB;
       });
       setStatuses(list);
     }, (error) => {
@@ -188,15 +206,16 @@ export default function Updates() {
   // Combine firestore and local statuses, filtering out duplicates
   const allStatusesCombined = [...statuses];
   localStatuses.forEach(ls => {
-    if (!allStatusesCombined.some(s => s.id === ls.id || (s.mediaUrl === ls.mediaUrl && s.timestamp === ls.timestamp))) {
+    if (!allStatusesCombined.some(s => s.id === ls.id || (s.mediaUrl === ls.mediaUrl && getStatusTimestamp(s) === getStatusTimestamp(ls)))) {
       allStatusesCombined.push(ls);
     }
   });
 
   // Filter statuses within last 24 hours AND check visibility based on audience selector settings
   const activeStatuses = allStatusesCombined.filter(s => {
+    const ts = getStatusTimestamp(s);
     // 24 hour window
-    if (s.timestamp <= Date.now() - 24 * 3600 * 1000) return false;
+    if (ts <= Date.now() - 24 * 3600 * 1000) return false;
     
     // If it is my status, it's always visible to me
     if (s.userId === currentUser?.id) return true;
@@ -231,7 +250,7 @@ export default function Updates() {
       id: item.id,
       mediaUrl: item.mediaUrl,
       caption: item.caption || '',
-      timestamp: item.timestamp,
+      timestamp: getStatusTimestamp(item),
       views: item.views || []
     });
     return acc;
@@ -1050,7 +1069,7 @@ export default function Updates() {
                 onClick={() => setShowAudienceModal(true)}
                 className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700/80 text-zinc-300 px-4 py-2 rounded-full text-xs transition-colors shadow-md border border-zinc-700/50"
               >
-                <span className="text-sm">🌐</span>
+                <Globe size={14} className="text-white shrink-0" />
                 <span className="font-semibold">
                   {audienceType === 'contacts' && (lang === 'ar' ? 'الحالة (جهات اتصالي)' : 'Status (My contacts)')}
                   {audienceType === 'except' && (lang === 'ar' ? `الحالة (تم استثناء ${excludedContacts.length})` : `Status (${excludedContacts.length} excluded)`)}

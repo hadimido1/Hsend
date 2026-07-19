@@ -5,7 +5,7 @@ import GifPicker from './GifPicker';
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore, Message } from '../lib/store';
 import { playSound, NOTIFICATION_SOUNDS, RINGTONE_SOUNDS } from '../lib/sounds';
-import { Send, PhoneMissed, Phone, Video, Info, Lock, Timer, ArrowRight, Mic, Smile, Paperclip, Camera as CameraIcon, Check, CheckCheck, Trash2, Reply, Forward, X, Copy, Sticker, Heart, Pencil, ChevronDown, ChevronUp, Keyboard, Search, MoreVertical, Image as ImageIcon, Ban, Download, Crop, Palette, Type, RotateCw, RotateCcw, Bell } from 'lucide-react';
+import { Send, PhoneMissed, Phone, Video, Info, Lock, Timer, ArrowRight, Mic, Smile, Paperclip, Camera as CameraIcon, Check, CheckCheck, Trash2, Reply, Forward, X, Copy, Sticker, Heart, Pencil, ChevronDown, ChevronUp, Keyboard, Search, MoreVertical, Image as ImageIcon, Ban, Download, Crop, Palette, Type, RotateCw, RotateCcw, Bell, Users } from 'lucide-react';
 import { deleteDoc, collection, query, where, orderBy, onSnapshot, setDoc, doc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
 import { socket } from '../lib/socket';
 import { db } from '../lib/firebase';
@@ -3033,7 +3033,7 @@ export default function ChatArea() {
                   onClick={() => setShowRecipientSelector(true)}
                   className="flex items-center gap-1.5 bg-white/10 hover:bg-white/15 text-zinc-200 px-4 py-2 rounded-full text-xs transition-colors shadow-md border border-white/5"
                 >
-                  <span className="text-sm">💬</span>
+                  <Users size={14} className="text-white shrink-0" />
                   <span className="font-semibold max-w-[280px] sm:max-w-md truncate text-right">
                     {lang === 'ar' ? 'إرسال إلى: ' : 'Send to: '}
                     {selectedRecipients.length === 0 && partner ? (partner.name || partner.username) : ''}
