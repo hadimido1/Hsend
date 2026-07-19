@@ -193,11 +193,6 @@ export default function App() {
           const userData = docSnap.data() as any;
           const state = useStore.getState();
           state.setCurrentUser({ ...state.currentUser, ...userData }, state.privateKeyPem!);
-        } else if (!(docSnap as any).metadata?.fromCache && navigator.onLine) {
-          console.log("User record not found in Firestore on server. Logging out...");
-          logoutGoogle().then(() => {
-             useStore.getState().logout();
-          });
         }
       }, (err) => {
          console.error("Error listening to user document:", err);
