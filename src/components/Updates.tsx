@@ -104,12 +104,34 @@ export function SegmentedRing({ count, viewed, size = 64 }: { count: number; vie
 // Main Updates Component
 // ----------------------------------------------------
 export default function Updates() {
-  const { currentUser } = useStore();
+  const { currentUser, users, contacts } = useStore();
   const { lang } = useTranslation();
   
   // States for active status list loaded from Firestore
   const [statuses, setStatuses] = useState<any[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Local statuses fallback
+  const [localStatuses, setLocalStatuses] = useState<any[]>(() => {
+    try {
+      return JSON.parse(localStorage.getItem('local_statuses') || '[]');
+    } catch {
+      return [];
+    }
+  });
+
+  // Audience selection states
+  const [audienceType, setAudienceType] = useState<'contacts' | 'except' | 'only'>('contacts');
+  const [excludedContacts, setExcludedContacts] = useState<string[]>([]);
+  const [onlyShareWithContacts, setOnlyShareWithContacts] = useState<string[]>([]);
+  const [showAudienceModal, setShowAudienceModal] = useState(false);
+  const [showContactSelectionModal, setShowContactSelectionModal] = useState(false);
+  const [contactSelectionType, setContactSelectionType] = useState<'except' | 'only'>('except');
+  const [searchContactText, setSearchContactText] = useState('');
+
+  const registeredFriends = Object.values(users).filter(u => 
+    !!contacts[u.id] && u.id !== 'hbot-ai' && u.id !== currentUser?.id
+  );
   
   // Status Creator/Editor States
   const [editingImage, setEditingImage] = useState<string | null>(null);
@@ -163,8 +185,36 @@ export default function Updates() {
     return () => unsubscribe();
   }, []);
 
-  // Filter statuses within last 24 hours
-  const activeStatuses = statuses.filter(s => s.timestamp > Date.now() - 24 * 3600 * 1000);
+  // Combine firestore and local statuses, filtering out duplicates
+  const allStatusesCombined = [...statuses];
+  localStatuses.forEach(ls => {
+    if (!allStatusesCombined.some(s => s.id === ls.id || (s.mediaUrl === ls.mediaUrl && s.timestamp === ls.timestamp))) {
+      allStatusesCombined.push(ls);
+    }
+  });
+
+  // Filter statuses within last 24 hours AND check visibility based on audience selector settings
+  const activeStatuses = allStatusesCombined.filter(s => {
+    // 24 hour window
+    if (s.timestamp <= Date.now() - 24 * 3600 * 1000) return false;
+    
+    // If it is my status, it's always visible to me
+    if (s.userId === currentUser?.id) return true;
+    
+    // Otherwise, check visibility based on audience fields
+    const audType = s.audienceType || 'contacts';
+    const excluded = s.excludedContacts || [];
+    const onlyWith = s.onlyShareWithContacts || [];
+    
+    if (audType === 'except') {
+      return !excluded.includes(currentUser?.id || '');
+    } else if (audType === 'only') {
+      return onlyWith.includes(currentUser?.id || '');
+    }
+    
+    // default: contacts
+    return true;
+  });
 
   // Group active statuses by user
   const grouped = activeStatuses.reduce<Record<string, GroupedStatus>>((acc, item) => {
@@ -486,25 +536,33 @@ export default function Updates() {
       
       const finalBase64 = canvas.toDataURL('image/jpeg', 0.85);
       
+      const newStatusDoc = {
+        userId: currentUser?.id || 'anonymous',
+        userName: currentUser?.name || currentUser?.username || 'User',
+        userAvatar: currentUser?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=me',
+        mediaUrl: finalBase64,
+        caption: statusCaption.trim(),
+        timestamp: Date.now(),
+        views: [],
+        audienceType,
+        excludedContacts,
+        onlyShareWithContacts
+      };
+
       try {
-        await addDoc(collection(db, 'statuses'), {
-          userId: currentUser?.id || 'anonymous',
-          userName: currentUser?.name || currentUser?.username || 'User',
-          userAvatar: currentUser?.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=me',
-          mediaUrl: finalBase64,
-          caption: statusCaption.trim(),
-          timestamp: Date.now(),
-          views: []
-        });
-        
+        await addDoc(collection(db, 'statuses'), newStatusDoc);
+      } catch (err) {
+        console.error("Error creating status document in Firebase, using fallback local storage:", err);
+        const fallbackId = 'local_' + Date.now();
+        const updatedLocal = [...localStatuses, { id: fallbackId, ...newStatusDoc }];
+        setLocalStatuses(updatedLocal);
+        localStorage.setItem('local_statuses', JSON.stringify(updatedLocal));
+      } finally {
         // Clear editor states
         setEditingImage(null);
         setPaths([]);
         setOverlays([]);
         setStatusCaption('');
-      } catch (err) {
-        console.error("Error creating status document:", err);
-      } finally {
         setIsSubmitting(false);
       }
     };
@@ -985,6 +1043,23 @@ export default function Updates() {
               )}
             </div>
 
+            {/* Audience privacy selector pill */}
+            <div className="bg-zinc-900 px-4 pt-3 pb-1 flex justify-between items-center z-20">
+              <button
+                type="button"
+                onClick={() => setShowAudienceModal(true)}
+                className="flex items-center gap-1.5 bg-zinc-800 hover:bg-zinc-700/80 text-zinc-300 px-4 py-2 rounded-full text-xs transition-colors shadow-md border border-zinc-700/50"
+              >
+                <span className="text-sm">🌐</span>
+                <span className="font-semibold">
+                  {audienceType === 'contacts' && (lang === 'ar' ? 'الحالة (جهات اتصالي)' : 'Status (My contacts)')}
+                  {audienceType === 'except' && (lang === 'ar' ? `الحالة (تم استثناء ${excludedContacts.length})` : `Status (${excludedContacts.length} excluded)`)}
+                  {audienceType === 'only' && (lang === 'ar' ? `الحالة (المشاركة فقط مع ${onlyShareWithContacts.length})` : `Status (${onlyShareWithContacts.length} included)`)}
+                </span>
+                <span className="text-[10px] text-[#00a884] ml-1">▼</span>
+              </button>
+            </div>
+
             {/* Bottom Caption Input Bar */}
             <div className="bg-zinc-900 border-t border-zinc-800 p-4 flex gap-3 items-center shrink-0 text-white z-20">
               <div className="flex-1 relative flex items-center">
@@ -1183,6 +1258,293 @@ export default function Updates() {
               </div>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ---------------------------------------------------- */}
+      {/* STATUS AUDIENCE OPTIONS DIALOG / BOTTOM SHEET */}
+      {/* ---------------------------------------------------- */}
+      <AnimatePresence>
+        {showAudienceModal && (
+          <div className="fixed inset-0 z-[610] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAudienceModal(false)}
+              className="absolute inset-0 bg-black/85 backdrop-blur-[2px]"
+            />
+
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              className="bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl max-w-md w-full overflow-hidden shadow-2xl relative z-10 text-white font-sans flex flex-col max-h-[85vh]"
+              style={{ direction: lang === 'ar' ? 'rtl' : 'ltr' }}
+            >
+              {/* Header */}
+              <div className="p-5 border-b border-zinc-800 flex items-center justify-between">
+                <h3 className="text-lg font-bold">
+                  {lang === 'ar' ? 'خصوصية الحالة' : 'Status Privacy'}
+                </h3>
+                <button
+                  onClick={() => setShowAudienceModal(false)}
+                  className="p-1.5 hover:bg-zinc-800 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Description */}
+              <div className="px-5 py-4 text-xs text-zinc-400 border-b border-zinc-800/50">
+                {lang === 'ar' 
+                  ? 'من يمكنه رؤية حالاتك الجديدة؟ لن تؤثر التغييرات على الحالات المنشورة مسبقاً.' 
+                  : 'Who can see your new status updates? Changes won\'t affect updates already sent.'}
+              </div>
+
+              {/* Options */}
+              <div className="flex-1 overflow-y-auto py-2">
+                {/* Option 1: All Contacts */}
+                <div 
+                  onClick={() => setAudienceType('contacts')}
+                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                >
+                  <div className="w-11 h-11 rounded-full bg-zinc-800 flex items-center justify-center text-xl shrink-0">
+                    👥
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-zinc-100">
+                      {lang === 'ar' ? 'جهات اتصالي' : 'My contacts'}
+                    </div>
+                    <div className="text-xs text-zinc-400">
+                      {lang === 'ar' ? 'جميع أصدقائك على الشاشة الرئيسية' : 'All of your home screen friends'}
+                    </div>
+                  </div>
+                  <div className="relative w-5 h-5 rounded-full border-2 border-zinc-600 flex items-center justify-center shrink-0">
+                    {audienceType === 'contacts' && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#00a884]" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Option 2: Contacts Except */}
+                <div 
+                  onClick={() => {
+                    setAudienceType('except');
+                    setContactSelectionType('except');
+                    setSearchContactText('');
+                    setShowContactSelectionModal(true);
+                  }}
+                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                >
+                  <div className="w-11 h-11 rounded-full bg-red-950/50 border border-red-900/30 flex items-center justify-center text-xl shrink-0 text-red-400">
+                    👤❌
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-zinc-100">
+                      {lang === 'ar' ? 'جهات اتصالي باستثناء...' : 'My contacts except...'}
+                    </div>
+                    <div className="text-xs text-zinc-400">
+                      {lang === 'ar' 
+                        ? `${excludedContacts.length} مستثنى` 
+                        : `${excludedContacts.length} contacts excluded`}
+                    </div>
+                  </div>
+                  <div className="relative w-5 h-5 rounded-full border-2 border-zinc-600 flex items-center justify-center shrink-0">
+                    {audienceType === 'except' && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#00a884]" />
+                    )}
+                  </div>
+                </div>
+
+                {/* Option 3: Only Share With */}
+                <div 
+                  onClick={() => {
+                    setAudienceType('only');
+                    setContactSelectionType('only');
+                    setSearchContactText('');
+                    setShowContactSelectionModal(true);
+                  }}
+                  className="flex items-center gap-4 px-5 py-3.5 hover:bg-zinc-800/50 cursor-pointer transition-colors"
+                >
+                  <div className="w-11 h-11 rounded-full bg-[#00a884]/10 border border-[#00a884]/20 flex items-center justify-center text-xl shrink-0 text-[#00a884]">
+                    👤✅
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-semibold text-zinc-100">
+                      {lang === 'ar' ? 'المشاركة فقط مع...' : 'Only share with...'}
+                    </div>
+                    <div className="text-xs text-zinc-400">
+                      {lang === 'ar' 
+                        ? `${onlyShareWithContacts.length} مستهدف` 
+                        : `${onlyShareWithContacts.length} contacts included`}
+                    </div>
+                  </div>
+                  <div className="relative w-5 h-5 rounded-full border-2 border-zinc-600 flex items-center justify-center shrink-0">
+                    {audienceType === 'only' && (
+                      <div className="w-2.5 h-2.5 rounded-full bg-[#00a884]" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Done button */}
+              <div className="p-4 border-t border-zinc-800/60 bg-zinc-950 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowAudienceModal(false)}
+                  className="px-6 py-2 bg-[#00a884] text-black text-sm font-bold rounded-full hover:bg-[#008f6f] active:scale-95 transition-transform"
+                >
+                  {lang === 'ar' ? 'تم' : 'Done'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ---------------------------------------------------- */}
+      {/* CONTACT SELECTION MODAL */}
+      {/* ---------------------------------------------------- */}
+      <AnimatePresence>
+        {showContactSelectionModal && (
+          <div className="fixed inset-0 z-[620] flex items-end sm:items-center justify-center p-0 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowContactSelectionModal(false)}
+              className="absolute inset-0 bg-black/90"
+            />
+
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              className="bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl max-w-md w-full overflow-hidden shadow-2xl relative z-10 text-white font-sans flex flex-col h-[85vh] sm:h-[75vh]"
+              style={{ direction: lang === 'ar' ? 'rtl' : 'ltr' }}
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-zinc-800 flex items-center gap-3">
+                <button
+                  onClick={() => setShowContactSelectionModal(false)}
+                  className="p-1.5 hover:bg-zinc-850 rounded-full transition-colors"
+                >
+                  <ArrowLeft size={20} className={lang === 'ar' ? 'rotate-180' : ''} />
+                </button>
+                <div className="flex-1">
+                  <h3 className="text-base font-bold">
+                    {contactSelectionType === 'except' 
+                      ? (lang === 'ar' ? 'جهات الاتصال باستثناء...' : 'Hide status from...')
+                      : (lang === 'ar' ? 'المشاركة فقط مع...' : 'Share status with...')}
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    {contactSelectionType === 'except'
+                      ? (lang === 'ar' ? `${excludedContacts.length} مستثنى` : `${excludedContacts.length} excluded`)
+                      : (lang === 'ar' ? `${onlyShareWithContacts.length} محدد` : `${onlyShareWithContacts.length} selected`)}
+                  </p>
+                </div>
+              </div>
+
+              {/* Search input bar */}
+              <div className="p-3 bg-zinc-950/45 border-b border-zinc-800/60">
+                <input
+                  type="text"
+                  value={searchContactText}
+                  onChange={(e) => setSearchContactText(e.target.value)}
+                  placeholder={lang === 'ar' ? 'البحث عن جهة اتصال...' : 'Search contact...'}
+                  className="w-full bg-zinc-800 border border-zinc-700/50 rounded-full px-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#00a884] transition-colors"
+                />
+              </div>
+
+              {/* Friend list */}
+              <div className="flex-1 overflow-y-auto py-2">
+                {registeredFriends.length === 0 ? (
+                  <div className="text-center py-12 text-zinc-500 text-sm">
+                    {lang === 'ar' ? 'لا يوجد جهات اتصال مسجلة' : 'No registered contacts found'}
+                  </div>
+                ) : (
+                  registeredFriends
+                    .filter(f => {
+                      if (!searchContactText) return true;
+                      const nameMatch = (f.name || '').toLowerCase().includes(searchContactText.toLowerCase());
+                      const userMatch = (f.username || '').toLowerCase().includes(searchContactText.toLowerCase());
+                      return nameMatch || userMatch;
+                    })
+                    .map(friend => {
+                      const isSelected = contactSelectionType === 'except'
+                        ? excludedContacts.includes(friend.id)
+                        : onlyShareWithContacts.includes(friend.id);
+
+                      const toggleSelection = () => {
+                        if (contactSelectionType === 'except') {
+                          setExcludedContacts(prev => 
+                            prev.includes(friend.id) 
+                              ? prev.filter(id => id !== friend.id) 
+                              : [...prev, friend.id]
+                          );
+                        } else {
+                          setOnlyShareWithContacts(prev => 
+                            prev.includes(friend.id) 
+                              ? prev.filter(id => id !== friend.id) 
+                              : [...prev, friend.id]
+                          );
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={friend.id}
+                          onClick={toggleSelection}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 cursor-pointer transition-colors border-b border-zinc-800/30"
+                        >
+                          {/* Avatar */}
+                          <div className="relative shrink-0">
+                            <img
+                              src={friend.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + friend.id}
+                              alt={friend.name || friend.username}
+                              className="w-10 h-10 rounded-full object-cover bg-zinc-800"
+                            />
+                          </div>
+
+                          {/* Info */}
+                          <div className="flex-1">
+                            <div className="text-sm font-semibold text-zinc-100">
+                              {friend.name || friend.username}
+                            </div>
+                            <div className="text-xs text-zinc-500">
+                              @{friend.username}
+                            </div>
+                          </div>
+
+                          {/* Green checkbox circle indicator */}
+                          <div className={`w-5.5 h-5.5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
+                            isSelected 
+                              ? 'bg-[#00a884] border-[#00a884]' 
+                              : 'border-zinc-600'
+                          }`}>
+                            {isSelected && (
+                              <span className="text-black font-black text-[10px]">✓</span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+
+              {/* Floating green check action button */}
+              <div className="p-4 border-t border-zinc-800/60 bg-zinc-950 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setShowContactSelectionModal(false)}
+                  className="w-12 h-12 rounded-full bg-[#00a884] hover:bg-[#008f6f] text-black shadow-lg flex items-center justify-center active:scale-95 transition-transform"
+                >
+                  <span className="text-lg font-bold">✓</span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

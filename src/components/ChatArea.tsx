@@ -441,6 +441,10 @@ export default function ChatArea() {
   const [showTextAddDialog, setShowTextAddDialog] = useState(false);
   const [textValueToInsert, setTextValueToInsert] = useState('');
 
+  const [selectedRecipients, setSelectedRecipients] = useState<string[]>([]);
+  const [showRecipientSelector, setShowRecipientSelector] = useState(false);
+  const [recipientSearchText, setRecipientSearchText] = useState('');
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const isDrawingRef = useRef(false);
   const currentPathRef = useRef<any[]>([]);
@@ -541,6 +545,18 @@ export default function ChatArea() {
   };
   const partner = activeChat ? users[activeChat] : null;
   const chatMessages = activeChat ? messages[activeChat] || [] : [];
+
+  useEffect(() => {
+    if (imageEditorOpen && partner && selectedRecipients.length === 0) {
+      setSelectedRecipients([partner.id]);
+    }
+  }, [imageEditorOpen, partner, selectedRecipients]);
+
+  useEffect(() => {
+    if (!imageEditorOpen) {
+      setSelectedRecipients([]);
+    }
+  }, [imageEditorOpen]);
   
   const handleAudioEnded = (endedMsgId: string) => {
     // Find the current message index
@@ -1432,79 +1448,98 @@ export default function ChatArea() {
       ctx.restore();
 
       const finalDataUrl = canvas.toDataURL('image/jpeg', 0.85);
-
-      const chatId = getChatId(currentUser.id, partner.id);
-      const msgId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       const expiresAt = ttl > 0 ? Date.now() + ttl * 60000 : null;
       const plainText = captionText.trim();
       const finalCaption = plainText ? plainText : '';
 
-      if (partner.id === 'hbot-ai') {
-        const msgData = {
-          id: msgId,
-          chatId,
-          sender_id: currentUser.id,
-          receiver_id: partner.id,
-          content: finalDataUrl,
-          caption: finalCaption,
-          type: 'image',
-          timestamp: serverTimestamp(),
-          expires_at: expiresAt,
-          status: 'sent'
-        };
-        await setDoc(doc(db, 'messages', msgId), msgData);
-        
-        const aiId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-        const aiMsgData = {
-          id: aiId,
-          chatId,
-          sender_id: 'hbot-ai',
-          receiver_id: currentUser.id,
-          content: lang === 'ar' 
-            ? `وصلتني صورتك المعدلة بنجاح! ${plainText ? `وتعليقك عليها: "${plainText}"` : ''}` 
-            : `I successfully received your edited image! ${plainText ? `Your caption: "${plainText}"` : ''}`,
-          type: 'ai',
-          timestamp: serverTimestamp(),
-          expires_at: expiresAt,
-          status: 'sent'
-        };
-        await setDoc(doc(db, 'messages', aiId), aiMsgData);
-      } else {
-        const partnerPubKey = await importPublicKey(partner.public_key);
-        const encryptedForPartner = await encryptMessage(partnerPubKey, finalDataUrl);
-        
-        const myPubKey = await importPublicKey(currentUser.public_key);
-        const encryptedForMe = await encryptMessage(myPubKey, finalDataUrl);
+      const recipientsToSend = selectedRecipients.length > 0 ? selectedRecipients : [partner.id];
 
-        let encryptedCaptionReceiver = '';
-        let encryptedCaptionSender = '';
-        if (finalCaption) {
-          encryptedCaptionReceiver = await encryptMessage(partnerPubKey, finalCaption);
-          encryptedCaptionSender = await encryptMessage(myPubKey, finalCaption);
+      for (const recId of recipientsToSend) {
+        const targetUser = users[recId];
+        if (!targetUser) continue;
+
+        const chatId = getChatId(currentUser.id, recId);
+        const msgId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+        if (recId === 'hbot-ai') {
+          const msgData = {
+            id: msgId,
+            chatId,
+            sender_id: currentUser.id,
+            receiver_id: recId,
+            content: finalDataUrl,
+            caption: finalCaption,
+            type: 'image',
+            timestamp: serverTimestamp(),
+            expires_at: expiresAt,
+            status: 'sent'
+          };
+          await setDoc(doc(db, 'messages', msgId), msgData);
+          
+          const aiId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          const aiMsgData = {
+            id: aiId,
+            chatId,
+            sender_id: 'hbot-ai',
+            receiver_id: currentUser.id,
+            content: lang === 'ar' 
+              ? `وصلتني صورتك المعدلة بنجاح! ${plainText ? `وتعليقك عليها: "${plainText}"` : ''}` 
+              : `I successfully received your edited image! ${plainText ? `Your caption: "${plainText}"` : ''}`,
+            type: 'ai',
+            timestamp: serverTimestamp(),
+            expires_at: expiresAt,
+            status: 'sent'
+          };
+          await setDoc(doc(db, 'messages', aiId), aiMsgData);
+        } else {
+          const partnerPubKey = await importPublicKey(targetUser.public_key);
+          const encryptedForPartner = await encryptMessage(partnerPubKey, finalDataUrl);
+          
+          const myPubKey = await importPublicKey(currentUser.public_key);
+          const encryptedForMe = await encryptMessage(myPubKey, finalDataUrl);
+
+          let encryptedCaptionReceiver = '';
+          let encryptedCaptionSender = '';
+          if (finalCaption) {
+            encryptedCaptionReceiver = await encryptMessage(partnerPubKey, finalCaption);
+            encryptedCaptionSender = await encryptMessage(myPubKey, finalCaption);
+          }
+
+          const msgData = {
+            id: msgId,
+            chatId,
+            sender_id: currentUser.id,
+            receiver_id: recId,
+            content: JSON.stringify({
+              forReceiver: encryptedForPartner,
+              forSender: encryptedForMe
+            }), 
+            caption: finalCaption ? JSON.stringify({
+              forReceiver: encryptedCaptionReceiver,
+              forSender: encryptedCaptionSender
+            }) : '',
+            type: 'image',
+            timestamp: serverTimestamp(),
+            expires_at: expiresAt,
+            status: 'sent'
+          };
+          await setDoc(doc(db, 'messages', msgId), msgData);
         }
 
-        const msgData = {
-          id: msgId,
-          chatId,
-          sender_id: currentUser.id,
-          receiver_id: partner.id,
-          content: JSON.stringify({
-            forReceiver: encryptedForPartner,
-            forSender: encryptedForMe
-          }), 
-          caption: finalCaption ? JSON.stringify({
-            forReceiver: encryptedCaptionReceiver,
-            forSender: encryptedCaptionSender
-          }) : '',
-          type: 'image',
-          timestamp: serverTimestamp(),
-          expires_at: expiresAt,
-          status: 'sent'
-        };
-        await setDoc(doc(db, 'messages', msgId), msgData);
+        // Ensure user added to home screen contact list
+        if (recId !== 'hbot-ai' && currentUser) {
+          const activeContacts = currentUser.contacts || [];
+          if (!activeContacts.includes(recId)) {
+            const newContacts = [...activeContacts, recId];
+            try {
+              await updateDoc(doc(db, 'users', currentUser.id), { contacts: newContacts });
+              useStore.getState().setCurrentUser({ ...currentUser, contacts: newContacts }, useStore.getState().privateKeyPem!);
+            } catch (e) {
+              console.error("Failed to add partner to home screen", e);
+            }
+          }
+        }
       }
-
-      await ensurePartnerInHomeScreen();
 
       setImageEditorOpen(false);
       setPendingImage(null);
@@ -2990,6 +3025,28 @@ export default function ChatArea() {
 
             {/* Footer: Optional Caption & Send Button */}
             <div className="bg-black/60 border-t border-white/10 p-4 pb-6 flex flex-col gap-3 z-50">
+              
+              {/* Recipient selection row */}
+              <div className="flex justify-between items-center px-1">
+                <button
+                  type="button"
+                  onClick={() => setShowRecipientSelector(true)}
+                  className="flex items-center gap-1.5 bg-white/10 hover:bg-white/15 text-zinc-200 px-4 py-2 rounded-full text-xs transition-colors shadow-md border border-white/5"
+                >
+                  <span className="text-sm">💬</span>
+                  <span className="font-semibold max-w-[280px] sm:max-w-md truncate text-right">
+                    {lang === 'ar' ? 'إرسال إلى: ' : 'Send to: '}
+                    {selectedRecipients.length === 0 && partner ? (partner.name || partner.username) : ''}
+                    {selectedRecipients.length > 0 ? (
+                      selectedRecipients
+                        .map(id => users[id]?.name || users[id]?.username || id)
+                        .join(', ')
+                    ) : ''}
+                  </span>
+                  <span className="text-[10px] text-[#00a884] ml-1">▼</span>
+                </button>
+              </div>
+
               <div className="flex items-center gap-3 bg-[var(--bg-tertiary)] rounded-full px-4 py-2.5">
                 <input 
                   type="text"
@@ -3008,6 +3065,152 @@ export default function ChatArea() {
               </div>
             </div>
 
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* ---------------------------------------------------- */}
+      {/* CHAT RECIPIENT SELECTOR MODAL */}
+      {/* ---------------------------------------------------- */}
+      <AnimatePresence>
+        {showRecipientSelector && (
+          <div className="fixed inset-0 z-[700] flex items-end sm:items-center justify-center p-0 sm:p-4 text-white">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setShowRecipientSelector(false); setRecipientSearchText(''); }}
+              className="absolute inset-0 bg-black/85 backdrop-blur-[2px]"
+            />
+
+            <motion.div
+              initial={{ y: '100%', opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: '100%', opacity: 0 }}
+              className="bg-zinc-900 border-t sm:border border-zinc-800 rounded-t-3xl sm:rounded-2xl max-w-md w-full overflow-hidden shadow-2xl relative z-10 text-white font-sans flex flex-col h-[85vh] sm:h-[75vh]"
+              style={{ direction: lang === 'ar' ? 'rtl' : 'ltr' }}
+            >
+              {/* Header */}
+              <div className="p-4 border-b border-zinc-800 flex items-center gap-3">
+                <button
+                  onClick={() => { setShowRecipientSelector(false); setRecipientSearchText(''); }}
+                  className="p-1.5 hover:bg-zinc-850 rounded-full transition-colors"
+                >
+                  <ArrowRight size={20} className={lang === 'ar' ? '' : 'rotate-180'} />
+                </button>
+                <div className="flex-1">
+                  <h3 className="text-base font-bold">
+                    {lang === 'ar' ? 'اختيار المستلمين' : 'Select Recipients'}
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    {lang === 'ar' 
+                      ? `تم تحديد ${selectedRecipients.length}` 
+                      : `${selectedRecipients.length} selected`}
+                  </p>
+                </div>
+              </div>
+
+              {/* Search input bar */}
+              <div className="p-3 bg-zinc-950/45 border-b border-zinc-800/60">
+                <input
+                  type="text"
+                  value={recipientSearchText}
+                  onChange={(e) => setRecipientSearchText(e.target.value)}
+                  placeholder={lang === 'ar' ? 'البحث عن جهة اتصال...' : 'Search contact...'}
+                  className="w-full bg-zinc-800 border border-zinc-700/50 rounded-full px-4 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:border-[#00a884] transition-colors"
+                />
+              </div>
+
+              {/* List */}
+              <div className="flex-1 overflow-y-auto py-2">
+                {Object.values(users)
+                  .filter(u => 
+                    (contacts[u.id] || u.id === 'hbot-ai') && u.id !== currentUser?.id
+                  )
+                  .filter(friend => {
+                    if (!recipientSearchText) return true;
+                    const nameMatch = (friend.name || '').toLowerCase().includes(recipientSearchText.toLowerCase());
+                    const userMatch = (friend.username || '').toLowerCase().includes(recipientSearchText.toLowerCase());
+                    return nameMatch || userMatch;
+                  })
+                  .length === 0 ? (
+                    <div className="text-center py-12 text-zinc-500 text-sm">
+                      {lang === 'ar' ? 'لا يوجد نتائج' : 'No results found'}
+                    </div>
+                  ) : (
+                    Object.values(users)
+                      .filter(u => 
+                        (contacts[u.id] || u.id === 'hbot-ai') && u.id !== currentUser?.id
+                      )
+                      .filter(friend => {
+                        if (!recipientSearchText) return true;
+                        const nameMatch = (friend.name || '').toLowerCase().includes(recipientSearchText.toLowerCase());
+                        const userMatch = (friend.username || '').toLowerCase().includes(recipientSearchText.toLowerCase());
+                        return nameMatch || userMatch;
+                      })
+                      .map(friend => {
+                        const isSelected = selectedRecipients.includes(friend.id);
+
+                        const toggleSelection = () => {
+                          setSelectedRecipients(prev => 
+                            prev.includes(friend.id) 
+                              ? prev.filter(id => id !== friend.id) 
+                              : [...prev, friend.id]
+                          );
+                        };
+
+                        return (
+                          <div
+                            key={friend.id}
+                            onClick={toggleSelection}
+                            className="flex items-center gap-3 px-4 py-3 hover:bg-zinc-800/40 cursor-pointer transition-colors border-b border-zinc-800/30"
+                          >
+                            {/* Avatar */}
+                            <div className="relative shrink-0">
+                              <img
+                                src={friend.avatar_url || 'https://api.dicebear.com/7.x/avataaars/svg?seed=' + friend.id}
+                                alt={friend.name || friend.username}
+                                className="w-10 h-10 rounded-full object-cover bg-zinc-800"
+                              />
+                            </div>
+
+                            {/* Info */}
+                            <div className="flex-1 text-right">
+                              <div className="text-sm font-semibold text-zinc-100">
+                                {friend.name || friend.username}
+                              </div>
+                              <div className="text-xs text-zinc-500">
+                                @{friend.username}
+                              </div>
+                            </div>
+
+                            {/* Green checkbox circle indicator */}
+                            <div className={`w-5.5 h-5.5 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ${
+                              isSelected 
+                                ? 'bg-[#00a884] border-[#00a884]' 
+                                : 'border-zinc-600'
+                            }`}>
+                              {isSelected && (
+                                <span className="text-black font-black text-[10px]">✓</span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+              </div>
+
+              {/* Confirm / Done button */}
+              <div className="p-4 border-t border-zinc-800/60 bg-zinc-950 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => { setShowRecipientSelector(false); setRecipientSearchText(''); }}
+                  className="px-6 py-2 bg-[#00a884] hover:bg-[#008f6f] text-black text-sm font-bold rounded-full active:scale-95 transition-transform"
+                >
+                  {lang === 'ar' ? 'تأكيد' : 'Confirm'}
+                </button>
+              </div>
+            </motion.div>
           </div>
         )}
       </AnimatePresence>
