@@ -660,73 +660,73 @@ export default function CallOverlay() {
         const callerInitial = (callerUser?.name || callerUser?.username || '?').charAt(0).toUpperCase();
 
         return (
-          <div className="w-full flex-1 flex flex-col items-center justify-between relative z-10 pt-16 pb-12">
-            <div className="flex flex-col items-center mt-4">
-               <h2 className="text-3xl text-white font-extrabold text-center px-6" dir="auto">
+          <div className="w-full flex-1 flex flex-col items-center justify-between relative z-10 pt-16 pb-12 bg-[#0b141a]">
+            {/* WhatsApp-style doodle background */}
+            <div className="absolute inset-0 opacity-10 bg-[url('https://i.ibb.co/6H9nB39/whatsapp-bg.png')] bg-repeat mix-blend-overlay pointer-events-none" />
+            
+            <div className="flex flex-col items-center mt-4 z-10">
+               <h2 className="text-4xl text-white font-bold text-center px-6 tracking-wide drop-shadow-md" dir="auto">
                  {callerName}
                </h2>
-               <p className="text-[#00a884] text-lg mt-2 flex items-center justify-center gap-2 font-medium">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#00a884] animate-ping" />
-                  {lang === 'ar' ? 'مكالمة واردة...' : 'Incoming Call...'}
+               <p className="text-gray-400 text-sm mt-2 flex items-center justify-center gap-1.5 font-medium">
+                  <span className="w-3 h-3 rounded-full bg-[#00a884] animate-pulse shadow-[0_0_8px_#00a884]" />
+                  HiSEND {incomingCallData.callerInfo?.call_type === 'video' ? 'Video' : 'Audio'} Call
                </p>
             </div>
             
-            <div className="flex-1 flex items-center justify-center w-full my-8">
-               <div className="w-52 h-52 rounded-full bg-[#128c7e]/10 flex items-center justify-center text-6xl text-white font-bold uppercase shadow-2xl border-4 border-[#00a884]/40 overflow-hidden relative">
+            <div className="flex-1 flex items-center justify-center w-full my-8 z-10">
+               <div className="w-64 h-64 sm:w-72 sm:h-72 rounded-full bg-[#128c7e]/20 flex items-center justify-center text-7xl text-white font-bold uppercase shadow-2xl overflow-hidden relative">
                  {callerAvatar ? (
                     <img src={callerAvatar} alt={callerName} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                  ) : (
                     <span className="text-white drop-shadow-md">{callerInitial}</span>
                  )}
-                 <div className="absolute inset-0 bg-[#00a884]/10 animate-pulse pointer-events-none" />
                </div>
             </div>
             
-            <div className="w-full px-12 flex justify-around items-center pb-8 max-w-sm">
+            <div className="w-full px-8 flex justify-between items-end pb-8 max-w-sm z-10">
               <div className="flex flex-col items-center gap-2.5">
-                <motion.div 
-                  drag="y"
-                  dragConstraints={{ top: -80, bottom: 0 }}
-                  dragElastic={0.1}
-                  onDragEnd={(e, info) => {
-                     if (info.offset.y < -40) rejectCall();
-                  }}
-                  className="w-16 h-16 bg-[#ea4335] text-white rounded-full flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing relative"
-                  title={lang === 'ar' ? 'اسحب للأعلى للرفض' : 'Swipe up to decline'}
+                <button 
+                  onClick={rejectCall}
+                  className="w-16 h-16 bg-[#eb5545] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#d44032] transition-colors active:scale-95"
                 >
-                  <motion.div 
-                     animate={{ y: [0, -10, 0] }} 
-                     transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                     className="absolute -top-6 text-white/70"
-                  >
-                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                  </motion.div>
-                  <PhoneOff size={28} />
-                </motion.div>
-                <span className="text-gray-300 text-xs font-semibold mt-2">{lang === 'ar' ? 'رفض' : 'Decline'}</span>
+                  <PhoneDown size={30} fill="currentColor" />
+                </button>
+                <span className="text-gray-300 text-[13px] font-medium mt-1 tracking-wide">{lang === 'ar' ? 'رفض' : 'Decline'}</span>
               </div>
 
-              <div className="flex flex-col items-center gap-2.5">
+              <div className="flex flex-col items-center gap-1 relative -top-6">
+                <motion.div 
+                  animate={{ y: [0, -8, 0], opacity: [0.3, 1, 0.3] }} 
+                  transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                  className="flex flex-col items-center mb-1 text-gray-300"
+                >
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="-mt-4"><polyline points="18 15 12 9 6 15"></polyline></svg>
+                </motion.div>
                 <motion.div 
                   drag="y"
-                  dragConstraints={{ top: -80, bottom: 0 }}
-                  dragElastic={0.1}
+                  dragConstraints={{ top: -120, bottom: 0 }}
+                  dragElastic={0.2}
                   onDragEnd={(e, info) => {
-                     if (info.offset.y < -40) answerCall();
+                     if (info.offset.y < -50) answerCall();
                   }}
-                  className="w-16 h-16 bg-[#00a884] text-white rounded-full flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing relative"
-                  title={lang === 'ar' ? 'اسحب للأعلى للرد' : 'Swipe up to answer'}
+                  className="w-18 h-18 bg-[#4cd964] text-white rounded-full flex items-center justify-center shadow-lg cursor-grab active:cursor-grabbing relative p-4"
+                  title={lang === 'ar' ? 'اسحب للأعلى للرد' : 'Swipe up to accept'}
                 >
-                  <motion.div 
-                     animate={{ y: [0, -10, 0] }} 
-                     transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-                     className="absolute -top-6 text-white/70"
-                  >
-                     <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="18 15 12 9 6 15"></polyline></svg>
-                  </motion.div>
-                  {incomingCallData.callerInfo?.call_type === 'video' ? <Video size={28} /> : <Phone size={28} />}
+                  {incomingCallData.callerInfo?.call_type === 'video' ? <Video size={32} fill="currentColor" /> : <Phone size={32} fill="currentColor" />}
                 </motion.div>
-                <span className="text-gray-300 text-xs font-semibold mt-2">{lang === 'ar' ? 'قبول' : 'Accept'}</span>
+                <span className="text-gray-300 text-[13px] font-medium mt-3 tracking-wide">{lang === 'ar' ? 'اسحب للقبول' : 'Swipe up to accept'}</span>
+              </div>
+              
+              <div className="flex flex-col items-center gap-2.5">
+                <button 
+                  onClick={rejectCall}
+                  className="w-16 h-16 bg-[#ffffff20] backdrop-blur-md text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#ffffff30] transition-colors active:scale-95"
+                >
+                  <MessageSquare size={26} fill="currentColor" />
+                </button>
+                <span className="text-gray-300 text-[13px] font-medium mt-1 tracking-wide">{lang === 'ar' ? 'رسالة' : 'Message'}</span>
               </div>
             </div>
           </div>
