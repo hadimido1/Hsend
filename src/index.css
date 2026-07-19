@@ -124,7 +124,8 @@ body {
 html, body {
   -webkit-user-select: none;
   user-select: none;
-  
+  overscroll-behavior: none;
+  touch-action: pan-x pan-y;
 }
 
 input, textarea, [contenteditable="true"] {

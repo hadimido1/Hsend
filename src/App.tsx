@@ -209,7 +209,7 @@ export default function App() {
   
   if (showSplash) {
     return (
-      <div className="flex flex-col h-screen w-full bg-[#0b141a] text-white overflow-hidden items-center justify-between py-12 relative" dir="ltr">
+      <div className="flex flex-col h-screen w-full bg-[#0b141a] text-white overflow-hidden items-center justify-between py-12 relative" dir="ltr" style={{ touchAction: 'none' }}>
         <div className="flex-1 flex items-center justify-center">
           <motion.div 
             initial={{ scale: 0.8, opacity: 0 }}

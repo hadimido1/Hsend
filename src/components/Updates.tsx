@@ -3,7 +3,7 @@ import { Camera, Edit2, Plus, ArrowLeft, RotateCw, Type, Smile, Undo, Send, Tras
 import { useStore } from '../lib/store';
 import { useTranslation } from '../lib/i18n';
 import { db } from '../lib/firebase';
-import { collection, onSnapshot, addDoc, query, orderBy, updateDoc, doc, arrayUnion } from 'firebase/firestore';
+import { collection, onSnapshot, addDoc, query, orderBy, updateDoc, doc, arrayUnion, deleteDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Interfaces for Story/Status system
@@ -220,7 +220,7 @@ export default function Updates() {
     // If it is my status, it's always visible to me
     if (s.userId === currentUser?.id) return true;
     
-    // Otherwise, check visibility based on audience fields
+    // Check visibility based on audience fields (this applies to the creator's rules for their audience)
     const audType = s.audienceType || 'contacts';
     const excluded = s.excludedContacts || [];
     const onlyWith = s.onlyShareWithContacts || [];
@@ -1228,29 +1228,60 @@ export default function Updates() {
               )}
 
               {/* Story Swipe up to Reply controls */}
-              <div className="flex gap-2 items-center max-w-md mx-auto w-full">
-                <input
-                  type="text"
-                  value={viewerReplyText}
-                  onChange={(e) => setViewerReplyText(e.target.value)}
-                  placeholder={lang === 'ar' ? 'الرد على الحالة...' : 'Reply to status...'}
-                  className="flex-1 bg-white/10 hover:bg-white/15 border border-white/15 rounded-full py-2 px-4 text-sm text-white placeholder-zinc-400 outline-none focus:ring-1 focus:ring-[#00a884]"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && viewerReplyText.trim()) {
-                      // Custom interactive feedback, then clear
-                      setViewerReplyText('');
-                    }
-                  }}
-                />
-                {viewerReplyText.trim() && (
-                  <button
-                    onClick={() => setViewerReplyText('')}
-                    className="w-9 h-9 rounded-full bg-[#00a884] flex items-center justify-center text-black font-semibold text-xs active:scale-95 transition-transform"
+              {activeStoryUser.userId !== currentUser?.id ? (
+                <div className="flex gap-2 items-center max-w-md mx-auto w-full">
+                  <input
+                    type="text"
+                    value={viewerReplyText}
+                    onChange={(e) => setViewerReplyText(e.target.value)}
+                    placeholder={lang === 'ar' ? 'الرد على الحالة...' : 'Reply to status...'}
+                    className="flex-1 bg-white/10 hover:bg-white/15 border border-white/15 rounded-full py-2 px-4 text-sm text-white placeholder-zinc-400 outline-none focus:ring-1 focus:ring-[#00a884]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && viewerReplyText.trim()) {
+                        setViewerReplyText('');
+                      }
+                    }}
+                  />
+                  {viewerReplyText.trim() && (
+                    <button
+                      onClick={() => setViewerReplyText('')}
+                      className="w-9 h-9 rounded-full bg-[#00a884] flex items-center justify-center text-black font-semibold text-xs active:scale-95 transition-transform"
+                    >
+                      <Send size={14} className={lang === 'ar' ? 'rotate-180' : ''} />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex gap-4 items-center justify-center max-w-md mx-auto w-full">
+                  <button 
+                    className="flex items-center gap-2 px-5 py-2.5 bg-zinc-800 hover:bg-zinc-700 text-white rounded-full transition-colors font-medium text-sm"
                   >
-                    <Send size={14} className={lang === 'ar' ? 'rotate-180' : ''} />
+                    <Eye size={18} />
+                    {activeStoryUser.items[activeStoryItemIndex]?.views?.length || 0}
                   </button>
-                )}
-              </div>
+                  <button 
+                    onClick={async () => {
+                      try {
+                        const statusId = activeStoryUser.items[activeStoryItemIndex]?.id;
+                        if (statusId.startsWith('local_')) {
+                          const updatedLocal = localStatuses.filter((s: any) => s.id !== statusId);
+                          setLocalStatuses(updatedLocal);
+                          localStorage.setItem('local_statuses', JSON.stringify(updatedLocal));
+                        } else {
+                          await deleteDoc(doc(db, 'statuses', statusId));
+                        }
+                        setActiveStoryUser(null);
+                      } catch (err) {
+                        console.error('Error deleting status:', err);
+                      }
+                    }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-red-950/50 hover:bg-red-900/60 border border-red-900/50 text-red-400 rounded-full transition-colors font-medium text-sm"
+                  >
+                    <Trash2 size={18} />
+                    {lang === 'ar' ? 'حذف' : 'Delete'}
+                  </button>
+                </div>
+              )}
             </div>
           </motion.div>
         )}

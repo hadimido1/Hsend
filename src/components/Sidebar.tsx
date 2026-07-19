@@ -63,9 +63,26 @@ export default function Sidebar() {
 
   const isAnyModalOpen = searchMode || menuOpen || showSettings || showProfile || showRequests || showAddFriendModal;
 
+  const handleTabSwitch = (tab: string) => {
+    if (currentTab === tab) return;
+    setCurrentTab(tab);
+    if (tab === 'Chats') {
+      window.history.pushState(null, '', ' ');
+    } else {
+      window.history.pushState(null, '', `#tab-${tab}`);
+    }
+  };
+
   useEffect(() => {
     const handleHash = () => {
       const hash = window.location.hash;
+      
+      if (hash.startsWith('#tab-')) {
+        setCurrentTab(hash.replace('#tab-', ''));
+      } else if (hash === '' || hash === '#') {
+        setCurrentTab('Chats');
+      }
+
       if (hash !== '#modal') {
         setSearchMode(false);
         setMenuOpen(false);
@@ -77,6 +94,9 @@ export default function Sidebar() {
     };
     window.addEventListener('hashchange', handleHash);
     
+    // Also run once on mount to read initial hash
+    handleHash();
+
     return () => window.removeEventListener('hashchange', handleHash);
   }, []);
 
@@ -805,21 +825,21 @@ export default function Sidebar() {
 
       {/* Bottom Navigation */}
       <div className="h-16 bg-bg-primary border-t border-border-primary shrink-0 flex items-center justify-around px-2 pb-1">
-        <button onClick={() => setCurrentTab('Chats')} className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${currentTab === 'Chats' ? 'text-[#00a884]' : 'text-text-muted hover:text-text-primary'}`}>
+        <button onClick={() => handleTabSwitch('Chats')} className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${currentTab === 'Chats' ? 'text-[#00a884]' : 'text-text-muted hover:text-text-primary'}`}>
           <MessageSquare size={24} className={currentTab === 'Chats' ? 'fill-current' : ''} />
           <span className="text-[10px] font-medium">{lang === 'ar' ? 'الدردشات' : 'Chats'}</span>
         </button>
-        <button onClick={() => setCurrentTab('Updates')} className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${currentTab === 'Updates' ? 'text-[#00a884]' : 'text-text-muted hover:text-text-primary'}`}>
+        <button onClick={() => handleTabSwitch('Updates')} className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${currentTab === 'Updates' ? 'text-[#00a884]' : 'text-text-muted hover:text-text-primary'}`}>
           <div className="relative">
             <Settings size={24} className={currentTab === 'Updates' ? 'fill-current' : ''} />
           </div>
           <span className="text-[10px] font-medium">{lang === 'ar' ? 'المستجدات' : 'Updates'}</span>
         </button>
-        <button onClick={() => setCurrentTab('Communities')} className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${currentTab === 'Communities' ? 'text-[#00a884]' : 'text-text-muted hover:text-text-primary'}`}>
+        <button onClick={() => handleTabSwitch('Communities')} className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${currentTab === 'Communities' ? 'text-[#00a884]' : 'text-text-muted hover:text-text-primary'}`}>
           <Users size={24} className={currentTab === 'Communities' ? 'fill-current' : ''} />
           <span className="text-[10px] font-medium">{lang === 'ar' ? 'المجتمعات' : 'Communities'}</span>
         </button>
-        <button onClick={() => setCurrentTab('Calls')} className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${currentTab === 'Calls' ? 'text-[#00a884]' : 'text-text-muted hover:text-text-primary'}`}>
+        <button onClick={() => handleTabSwitch('Calls')} className={`flex flex-col items-center justify-center w-full h-full gap-1 transition-colors ${currentTab === 'Calls' ? 'text-[#00a884]' : 'text-text-muted hover:text-text-primary'}`}>
           <PhoneIcon size={24} className={currentTab === 'Calls' ? 'fill-current' : ''} />
           <span className="text-[10px] font-medium">{lang === 'ar' ? 'المكالمات' : 'Calls'}</span>
         </button>
