@@ -63,6 +63,7 @@ body {
   font-family: var(--font-sans);
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  overscroll-behavior-y: none;
 }
 
 /* Hide scrollbars */
@@ -140,5 +141,5 @@ input, textarea, [contenteditable="true"] {
 .overflow-y-auto {
   transform: translateZ(0);
   will-change: scroll-position;
-  overscroll-behavior-y: auto;
+  overscroll-behavior-y: none;
 }

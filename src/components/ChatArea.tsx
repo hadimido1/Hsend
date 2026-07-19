@@ -119,7 +119,7 @@ const MessageItem = ({
 
   return (
     <motion.div 
-      layout
+      
       id={`msg-${msg.id}`}
       className={`w-full flex relative transition-colors duration-300 ${isSelected ? 'bg-[#005c4b]/40' : ''} ${justifyClass} py-0.5 px-3 sm:px-6 group`}
       onClick={() => {
@@ -132,6 +132,7 @@ const MessageItem = ({
       <AnimatePresence>
         {isSelected && (
            <motion.div
+             key="check"
              initial={{ scale: 0, opacity: 0 }}
              animate={{ scale: 1, opacity: 1 }}
              exit={{ scale: 0, opacity: 0 }}
@@ -202,11 +203,11 @@ const MessageItem = ({
         </div>
       )}
       <motion.div 
-        style={{ x }}
+        style={{ x, touchAction: "pan-y" }}
         transition={{ duration: 0.15 }}
         drag="x"
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.6}
+        dragElastic={0.8}
         onDragEnd={(_, info) => {
           if (info.offset.x > 70) {
             setReplyingTo(msg);
@@ -247,41 +248,26 @@ const MessageItem = ({
             <div className="text-sm sm:text-base leading-relaxed markdown-body prose prose-invert max-w-none prose-p:my-1 prose-a:text-purple-400 prose-img:rounded-lg prose-img:max-w-full break-words">
               <Markdown>{msg.content}</Markdown>
             </div>
-          ) : msg.type === 'call' || msg.type === 'call_missed' || msg.content === 'Voice call' || msg.content === 'مكالمة فائتة' || msg.content === 'مكالمة صوتية' || msg.content === 'Missed call' || msg.content === 'No answer' ? (
-            <div className="flex items-center gap-3 pr-4">
-              <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center shrink-0">
-                {isMe ? (
-                   <Phone size={20} className="text-gray-400" />
-                ) : (
-                   <PhoneMissed size={20} className="text-red-500" />
-                )}
-              </div>
-              <div className="flex flex-col">
-                <span className="text-base font-semibold text-white/90">
-                  {isMe ? (lang === 'ar' ? 'مكالمة صوتية' : 'Voice call') : (lang === 'ar' ? 'مكالمة فائتة' : 'Missed call')}
-                </span>
-                <span className="text-[13px] text-white/60 mt-0.5 flex items-center gap-1 font-medium">
-                   {isMe ? (
-                     <>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path><polyline points="14 2 22 2 22 10"></polyline><line x1="22" y1="2" x2="16" y2="8"></line></svg>
-                        {lang === 'ar' ? 'لم يتم الرد' : 'No answer'}
-                     </>
-                   ) : (
-                     <>
-                        <PhoneMissed size={12} className="text-red-500" />
-                        {lang === 'ar' ? 'لم يتم الرد' : 'No answer'}
-                     </>
-                   )}
-                </span>
-              </div>
+          ) : msg.type === 'text' || !msg.type ? (
+            <div className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words font-sans">
+              {msg.content}
             </div>
-
           ) : msg.type === 'call_log' || msg.type === 'call' || msg.type === 'call_missed' || msg.content === 'Voice call' || msg.content === 'مكالمة فائتة' || msg.content === 'مكالمة صوتية' || msg.content === 'Missed call' || msg.content === 'No answer' ? (() => {
              const isMissed = msg.type === 'call_missed' || msg.content?.includes('missed') || msg.content?.includes('فائتة') || msg.content?.includes('No answer');
+             const isVideo = msg.content?.includes('video') || msg.content?.includes('Video');
              return (
-            <div className="flex items-center gap-3 pr-4">
+            <div 
+              className="flex items-center gap-3 pr-4 cursor-pointer hover:opacity-80 active:scale-95 transition-all"
+              onClick={(e) => {
+                 e.stopPropagation();
+                 
+                 useStore.getState().setCallStatus('calling', partner, isVideo ? 'video' : 'audio');
+              }}
+            >
               <div className="w-10 h-10 rounded-full bg-black/10 flex items-center justify-center shrink-0">
-                {isMe ? (
+                {isVideo ? (
+                   <Video size={20} className={isMissed && !isMe ? 'text-red-500' : 'text-gray-400'} />
+                ) : isMe ? (
                    <Phone size={20} className="text-gray-400" />
                 ) : (
                    <PhoneMissed size={20} className={isMissed ? 'text-red-500' : 'text-[#00a884]'} />
@@ -289,7 +275,7 @@ const MessageItem = ({
               </div>
               <div className="flex flex-col">
                 <span className="text-base font-semibold text-white/90">
-                  {isMe ? (lang === 'ar' ? 'مكالمة صوتية' : 'Voice call') : (isMissed ? (lang === 'ar' ? 'مكالمة فائتة' : 'Missed call') : (lang === 'ar' ? 'مكالمة صوتية' : 'Voice call'))}
+                  {isMe ? (isVideo ? (lang === 'ar' ? 'مكالمة فيديو' : 'Video call') : (lang === 'ar' ? 'مكالمة صوتية' : 'Voice call')) : (isMissed ? (lang === 'ar' ? 'مكالمة فائتة' : 'Missed call') : (isVideo ? (lang === 'ar' ? 'مكالمة فيديو' : 'Video call') : (lang === 'ar' ? 'مكالمة صوتية' : 'Voice call')))}
                 </span>
                 <span className="text-[13px] text-white/60 mt-0.5 flex items-center gap-1 font-medium">
                    {isMe ? (
@@ -1744,6 +1730,7 @@ export default function ChatArea() {
       )}
       
       {/* Messages */}
+      <div className="flex-1 flex flex-col relative overflow-hidden">
       <div 
         ref={messagesContainerRef}
         onScroll={handleScroll}
@@ -1755,7 +1742,7 @@ export default function ChatArea() {
           {t('chat.e2e.notice')}
         </div>
         
-        {chatMessages.map(msg => (
+          {chatMessages.map(msg => (
           <MessageItem 
             key={msg.id}
             msg={msg}
@@ -1794,6 +1781,7 @@ export default function ChatArea() {
           </motion.div>
         )}
         <div ref={chatEndRef} />
+      </div>
 
         {/* Scroll to Bottom Button */}
         <AnimatePresence>
@@ -1804,7 +1792,7 @@ export default function ChatArea() {
               exit={{ opacity: 0, scale: 0.5, y: 10 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
               onClick={scrollToBottom}
-              className="fixed bottom-24 right-4 sm:absolute sm:bottom-4 sm:right-6 z-40 bg-[var(--bg-tertiary)] text-[#00a884] p-2 rounded-full shadow-lg border border-[var(--border-primary)] hover:bg-[var(--bg-hover)] transition-colors"
+              className="absolute bottom-4 right-4 sm:right-6 z-40 bg-[var(--bg-tertiary)] text-[#00a884] p-2 rounded-full shadow-lg border border-[var(--border-primary)] hover:bg-[var(--bg-hover)] transition-colors"
               title={lang === 'ar' ? 'الذهاب للأسفل' : 'Scroll to bottom'}
             >
               <ChevronDown size={24} />

@@ -34,7 +34,8 @@ export default function RecentCalls() {
   }, [messages, currentUser?.id]);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-bg-primary flex flex-col h-full">
+    <div className="flex-1 bg-bg-primary flex flex-col h-full relative">
+      <div className="flex-1 overflow-y-auto flex flex-col">
       <div className="p-4 pt-6 text-2xl font-bold text-text-primary px-5 pb-2">
         {lang === 'ar' ? 'المكالمات' : 'Calls'}
       </div>
@@ -97,6 +98,7 @@ export default function RecentCalls() {
          </div>
       )}
       
+      </div>
       {/* Floating Action Button for Calls */}
       <button 
         className={`absolute bottom-20 ${lang === 'ar' ? 'left-4' : 'right-4'} w-14 h-14 bg-[#00a884] rounded-[16px] flex items-center justify-center text-white shadow-lg hover:bg-opacity-90 transition-transform active:scale-95 z-10`}
