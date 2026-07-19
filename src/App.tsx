@@ -106,6 +106,12 @@ export default function App() {
 
             // Decrypt and add message to store
             try {
+              const existingMsgs = useStore.getState().messages[partnerId] || [];
+              const existing = existingMsgs.find(m => m.id === data.id);
+              if (existing && existing.content && !data.is_edited) {
+                return;
+              }
+
               let encryptedContent = data.content;
               try {
                 const parsed = JSON.parse(data.content);
@@ -187,7 +193,7 @@ export default function App() {
           const userData = docSnap.data() as any;
           const state = useStore.getState();
           state.setCurrentUser({ ...state.currentUser, ...userData }, state.privateKeyPem!);
-        } else if (!docSnap.metadata.fromCache) {
+        } else if (!(docSnap as any).metadata?.fromCache && navigator.onLine) {
           console.log("User record not found in Firestore on server. Logging out...");
           logoutGoogle().then(() => {
              useStore.getState().logout();

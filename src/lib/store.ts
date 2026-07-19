@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { get as idbGet, set as idbSet } from 'idb-keyval';
 
 export interface User {
   id: string;
@@ -164,15 +165,15 @@ export const useStore = create<ChatState>((set) => ({
   
   messages: {},
   addMessage: (partnerId, message) => set((state) => {
-    // If incognito mode is active and we are receiving/sending, do not persist to store permanently if closing
     const existing = state.messages[partnerId] || [];
     if (existing.find(m => m.id === message.id)) return state;
-    return {
-      messages: {
-        ...state.messages,
-        [partnerId]: [...existing, message].sort((a, b) => a.timestamp - b.timestamp)
-      }
+    const newMsgs = [...existing, message].sort((a, b) => a.timestamp - b.timestamp);
+    const updatedMessages = {
+      ...state.messages,
+      [partnerId]: newMsgs
     };
+    idbSet('chat_messages_cache_v1', updatedMessages).catch(e => console.error("Error caching messages", e));
+    return { messages: updatedMessages };
   }),
   updateMessage: (partnerId, messageId, updates) => set((state) => {
     const existing = state.messages[partnerId] || [];
@@ -180,16 +181,18 @@ export const useStore = create<ChatState>((set) => ({
     if (index === -1) return state;
     const newMessages = [...existing];
     newMessages[index] = { ...newMessages[index], ...updates };
-    return {
-      messages: {
-        ...state.messages,
-        [partnerId]: newMessages
-      }
+    const updatedMessages = {
+      ...state.messages,
+      [partnerId]: newMessages
     };
+    idbSet('chat_messages_cache_v1', updatedMessages).catch(e => console.error("Error caching messages", e));
+    return { messages: updatedMessages };
   }),
-  setMessages: (partnerId, messages) => set((state) => ({
-    messages: { ...state.messages, [partnerId]: messages }
-  })),
+  setMessages: (partnerId, messages) => set((state) => {
+    const updatedMessages = { ...state.messages, [partnerId]: messages };
+    idbSet('chat_messages_cache_v1', updatedMessages).catch(e => console.error("Error caching messages", e));
+    return { messages: updatedMessages };
+  }),
   
   activeChat: null,
   setActiveChat: (id) => set((state) => {
@@ -234,6 +237,12 @@ const storedActiveChat = localStorage.getItem('chat_active_chat');
 
 if (storedUser && storedKey) {
   useStore.setState({ currentUser: JSON.parse(storedUser), privateKeyPem: storedKey });
+  // Load cached messages asynchronously from IndexedDB
+  idbGet('chat_messages_cache_v1').then((cached) => {
+    if (cached) {
+      useStore.setState({ messages: cached });
+    }
+  }).catch(e => console.error("Error loading cached messages", e));
 }
 
 if (storedActiveChat) {

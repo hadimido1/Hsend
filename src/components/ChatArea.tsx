@@ -5,7 +5,7 @@ import GifPicker from './GifPicker';
 import React, { useState, useEffect, useRef } from 'react';
 import { useStore, Message } from '../lib/store';
 import { playSound, NOTIFICATION_SOUNDS, RINGTONE_SOUNDS } from '../lib/sounds';
-import { Send, PhoneMissed, Phone, Video, Info, Lock, Timer, ArrowRight, Mic, Smile, Paperclip, Camera as CameraIcon, Check, CheckCheck, Trash2, Reply, Forward, X, Copy, Sticker, Heart, Pencil, ChevronDown, ChevronUp, Keyboard, Search, MoreVertical, Image as ImageIcon, Ban, Download, Crop, Palette, Type, RotateCw, RotateCcw, Bell, Users } from 'lucide-react';
+import { Send, PhoneMissed, Phone, Video, Info, Lock, Timer, ArrowRight, Mic, Smile, Paperclip, Camera as CameraIcon, Check, CheckCheck, Trash2, Reply, Forward, X, Copy, Sticker, Heart, Pencil, ChevronDown, ChevronUp, Keyboard, Search, MoreVertical, Image as ImageIcon, Ban, Download, Crop, Palette, Type, RotateCw, RotateCcw, Bell, Users, Clock } from 'lucide-react';
 import { deleteDoc, collection, query, where, orderBy, onSnapshot, setDoc, doc, serverTimestamp, updateDoc, arrayUnion } from 'firebase/firestore';
 import { socket } from '../lib/socket';
 import { db } from '../lib/firebase';
@@ -349,8 +349,14 @@ const MessageItem = React.memo(({
               {format(msg.timestamp || Date.now(), 'HH:mm')}
             </span>
             {isMe && partner?.id !== 'hbot-ai' && (
-              <span className={msg.status === 'read' ? 'text-blue-400' : 'text-text-muted'}>
-                {msg.status === 'read' ? <CheckCheck size={14} /> : <Check size={14} />}
+              <span>
+                {msg.status === 'offline' || msg.status === 'waiting' ? (
+                  <Clock size={13} className="text-text-muted animate-pulse" />
+                ) : (
+                  <span className={msg.status === 'read' ? 'text-blue-400' : 'text-text-muted'}>
+                    {msg.status === 'read' ? <CheckCheck size={14} /> : <Check size={14} />}
+                  </span>
+                )}
               </span>
             )}
           </div>
@@ -620,7 +626,8 @@ export default function ChatArea() {
                   if (typeof data.timestamp === 'number') ts = data.timestamp;
                   else if (typeof data.timestamp.toMillis === 'function') ts = data.timestamp.toMillis();
               }
-              return { ...data, timestamp: ts };
+              const status = d.metadata.hasPendingWrites ? 'waiting' : (data.status || 'sent');
+              return { ...data, status, timestamp: ts };
           });
           rawMsgs.sort((a, b) => a.timestamp - b.timestamp);
           rawMsgs = rawMsgs.filter(m => m.type !== 'call_signal' && (!m.deleted_for || !m.deleted_for.includes(currentUser.id)));
@@ -639,11 +646,21 @@ export default function ChatArea() {
           const privKey = await importPrivateKey(privateKeyPem);
           const decryptedMsgs: Message[] = [];
           
+          const existingMsgs = useStore.getState().messages[activeChat] || [];
+          const existingMap = new Map<string, Message>();
+          existingMsgs.forEach(m => existingMap.set(m.id, m));
+          
           for (const msg of rawMsgs) {
              if (blocked.includes(msg.sender_id)) {
                 continue;
              }
              try {
+               const existing = existingMap.get(msg.id);
+               if (existing && existing.content && !msg.is_edited) {
+                 decryptedMsgs.push({ ...msg, content: existing.content, caption: existing.caption });
+                 continue;
+               }
+
                let encryptedContent = msg.content;
                try {
                  const parsed = JSON.parse(msg.content);

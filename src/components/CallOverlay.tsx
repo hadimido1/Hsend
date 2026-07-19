@@ -378,9 +378,8 @@ export default function CallOverlay() {
       console.error(e);
       alert("Microphone/Camera access denied. Please allow permissions or open the app in a new tab to make calls.");
       setCallStatus('idle');
-      } finally {
-        setIsAnswering(false);
-      }
+    } finally {
+      setIsAnswering(false);
     }
   };
 
