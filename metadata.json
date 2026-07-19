@@ -1,0 +1,6 @@
+{
+  "name": "HiSEND",
+  "description": "An end-to-end encrypted chat application without phone numbers.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,158 @@
+130:    return (
+131-      <div className="flex-1 hidden md:flex flex-col items-center justify-center bg-bg-primary text-text-muted" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }}>
+132-        <div className="w-16 h-16 rounded-full bg-bg-tertiary flex items-center justify-center mb-4">
+133-          <Lock className="w-8 h-8 text-text-muted" />
+134-        </div>
+135-        <h2 className="text-xl font-medium text-text-primary mb-2">{t('chat.e2e.title')}</h2>
+136-        <p className="max-w-xs text-center text-sm leading-relaxed">{t('chat.e2e.desc')}</p>
+137-      </div>
+138-    );
+139-  }
+140-
+141:  return (
+142-    <div className="flex-1 flex flex-col relative bg-bg-primary w-full" style={{ backgroundImage: "url('https://www.transparenttextures.com/patterns/cubes.png')" }}>
+143-      {/* Header */}
+144-      <div className={`h-16 flex items-center justify-between px-3 sm:px-4 py-2 shrink-0 z-10 shadow-sm border-b border-border-primary ${partner.id === 'hbot-ai' ? 'bg-gradient-to-r from-indigo-900/40 via-purple-900/40 to-indigo-900/40' : 'bg-bg-secondary'}`}>
+145-        <div className="flex items-center gap-2 sm:gap-4">
+146-          <button 
+147-            onClick={() => setActiveChat(null)}
+148-            className="md:hidden p-2 text-text-secondary hover:bg-bg-hover rounded-full transition-colors focus:outline-none"
+149-          >
+150-            <ArrowRight size={24} className={`transform ${lang === 'ar' ? '' : 'rotate-180'}`} />
+151-          </button>
+152-          <motion.div 
+153-            whileHover={{ scale: 1.1 }}
+154-            className={`w-10 h-10 rounded-full flex items-center justify-center text-white font-bold uppercase shrink-0 overflow-hidden ${partner.id === 'hbot-ai' ? 'bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 shadow-[0_0_15px_rgba(168,85,247,0.5)]' : 'bg-accent-primary'}`}
+155-          >
+156-            {partner.id === 'hbot-ai' ? (
+157-              <motion.img 
+158-                src={partner.avatar_url} 
+159-                alt="AI" 
+160-                className="w-full h-full object-cover" 
+161-                animate={{ rotate: 360 }}
+162-                transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+163-              />
+164-            ) : partner.avatar_url ? (
+165-              <img src={partner.avatar_url} alt="" className="w-full h-full object-cover" />
+166-            ) : (
+167-              partner.username.charAt(0)
+168-            )}
+169-          </motion.div>
+170-          <div className="flex flex-col">
+171-            <h3 className={`font-medium truncate max-w-[120px] sm:max-w-[200px] ${partner.id === 'hbot-ai' ? 'bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-purple-400 font-bold' : 'text-text-primary'}`}>
+172-              {partner.name || partner.username}
+173-            </h3>
+174-            <div className="flex items-center gap-1 text-[11px] text-text-muted">
+175-              {partner.id === 'hbot-ai' ? (
+176-                 <span className="text-purple-400">AI Assistant</span>
+177-              ) : (
+178-                 <>
+179-                   <Lock size={10} className="shrink-0" />
+180-                   <span className="truncate">{t('chat.e2e.badge')}</span>
+181-                 </>
+182-              )}
+183-            </div>
+184-          </div>
+185-        </div>
+186-        
+187-        <div className="flex items-center gap-1 sm:gap-4 text-text-secondary">
+188-          <button onClick={handleAudioCall} className="hover:text-text-primary transition-colors p-2 rounded-full hover:bg-bg-hover" title={t('chat.audio_call')}>
+189-            <Phone size={20} />
+190-          </button>
+191-          <button onClick={handleVideoCall} className="hover:text-text-primary transition-colors p-2 rounded-full hover:bg-bg-hover" title={t('chat.video_call')}>
+192-            <Video size={20} />
+193-          </button>
+194-          <button className="hover:text-text-primary transition-colors hidden sm:block p-2 rounded-full hover:bg-bg-hover">
+195-            <Info size={20} />
+196-          </button>
+197-        </div>
+198-      </div>
+199-      
+200-      {/* Messages */}
+201-      <div className="flex-1 p-4 sm:p-8 overflow-y-auto flex flex-col gap-4">
+202-        <div className="self-center bg-bg-tertiary text-text-muted text-[11px] px-3 py-1.5 rounded-lg shadow-sm flex items-center gap-2 max-w-[85%] text-center leading-relaxed border border-border-primary">
+203-          <Lock size={12} className="shrink-0" />
+204-          {t('chat.e2e.notice')}
+205-        </div>
+206-        
+207-        {chatMessages.map(msg => {
+208-          const isMe = msg.sender_id === currentUser?.id;
+209-          const isAI = msg.sender_id === 'hbot-ai';
+210:          return (
+211-            <motion.div 
+212-              key={msg.id} 
+213-              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+214-              animate={{ opacity: 1, y: 0, scale: 1 }}
+215-              transition={{ duration: 0.2 }}
+216-              className={`flex flex-col max-w-[85%] sm:max-w-[75%] ${isMe ? 'items-start self-start' : 'items-end self-end'}`}
+217-            >
+218-              <div 
+219-                className={`p-2.5 rounded-xl shadow-sm relative ${
+220-                  isMe 
+221-                    ? 'bg-accent-primary text-white rounded-tr-none' 
+222-                    : isAI 
+223-                      ? 'animate-rgb-border text-text-primary'
+224-                      : 'bg-bg-secondary text-text-primary rounded-tl-none border border-border-primary'
+225-                }`}
+226-              >
+227-                {isAI ? (
+228-                  <div className="text-sm sm:text-base leading-relaxed markdown-body prose prose-invert max-w-none prose-p:my-1 prose-a:text-purple-400 prose-img:rounded-lg prose-img:max-w-full">
+229-                    <Markdown>{msg.content}</Markdown>
+230-                  </div>
+231-                ) : (
+232-                  <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+233-                )}
+234-                <div className={`flex items-center gap-1 mt-1 ${isMe ? 'justify-start' : 'justify-end'}`}>
+235-                  {msg.expires_at && (
+236-                    <span className={isMe ? 'text-white/80' : 'text-accent-primary'} title="رسالة مؤقتة">
+237-                      <Timer size={12} />
+238-                    </span>
+239-                  )}
+240-                  <span className={`text-[10px] opacity-80 ${isMe ? 'text-white/80' : 'text-text-muted'}`} dir="ltr">{format(msg.timestamp, 'HH:mm')}</span>
+241-                </div>
+242-              </div>
+243-            </motion.div>
+244-          );
+245-        })}
+246-        <div ref={chatEndRef} />
+247-      </div>
+248-      
+249-      {/* Input */}
+250-      <div className="bg-bg-secondary px-2 sm:px-4 py-3 flex items-center gap-2 sm:gap-4 shrink-0 border-t border-border-primary">
+251-        <form onSubmit={handleSend} className="flex-1 flex items-center gap-2 sm:gap-4 relative">
+252-          {partner.id !== 'hbot-ai' && (
+253-            <div className={`absolute -top-12 ${lang === 'ar' ? 'right-0' : 'left-0'} bg-bg-tertiary rounded-lg border border-border-primary p-1 flex items-center gap-2 shadow-lg z-20`}>
+254-               <span className="text-xs text-text-muted px-2">{t('chat.input.timer')}</span>
+255-               <select 
+256-                 value={ttl} 
+257-                 onChange={e => setTtl(Number(e.target.value))}
+258-                 className="bg-transparent text-xs text-text-primary focus:outline-none cursor-pointer"
+259-               >
+260-                 <option value={0}>{t('chat.input.timer.off')}</option>
+261-                 <option value={1}>{t('chat.input.timer.min')}</option>
+262-                 <option value={60}>{t('chat.input.timer.hour')}</option>
+263-                 <option value={1440}>{t('chat.input.timer.day')}</option>
+264-               </select>
+265-            </div>
+266-          )}
+267-          <div className={`flex-1 bg-bg-tertiary rounded-full px-4 py-2 sm:py-3 flex items-center border border-border-primary transition-all ${partner.id === 'hbot-ai' ? 'focus-within:border-purple-500 focus-within:ring-1 focus-within:ring-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.1)]' : 'focus-within:border-accent-primary focus-within:ring-1 focus-within:ring-accent-primary'}`}>
+268-            <input
+269-              type="text"
+270-              value={inputText}
+271-              onChange={(e) => setInputText(e.target.value)}
+272-              placeholder={partner.id === 'hbot-ai' ? 'Ask HBOT anything...' : t('chat.input.placeholder')}
+273-              className="bg-transparent border-none outline-none text-sm sm:text-base w-full text-text-primary placeholder-text-muted"
+274-            />
+275-          </div>
+276-          <button 
+277-            type="submit"
+278-            disabled={!inputText.trim()}
+279-            className={`w-10 h-10 sm:w-12 sm:h-12 shrink-0 disabled:bg-bg-tertiary disabled:text-text-muted text-black rounded-full flex items-center justify-center cursor-pointer transition-colors shadow-sm ${partner.id === 'hbot-ai' ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white' : 'bg-accent-primary'}`}
+280-          >
+281-            <Send size={20} className={`transform ${lang === 'ar' ? 'rotate-180 mr-1' : 'ml-1'}`} />
+282-          </button>
+283-        </form>
+284-      </div>
+285-    </div>
+286-  );
+287-}
