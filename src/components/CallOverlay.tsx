@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, useMotionValue, useTransform } from 'motion/react';
 import { useStore, User } from '../lib/store';
 import { socket } from '../lib/socket';
-import { Phone, PhoneOff, Video, VideoOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
+import { Phone, PhoneOff, PhoneOff, MessageSquare, Video, VideoOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import { useTranslation } from '../lib/i18n';
 import { db } from '../lib/firebase';
 import { doc, setDoc, onSnapshot, updateDoc, deleteDoc, arrayUnion } from 'firebase/firestore';
@@ -690,7 +690,7 @@ export default function CallOverlay() {
                   onClick={rejectCall}
                   className="w-16 h-16 bg-[#eb5545] text-white rounded-full flex items-center justify-center shadow-lg hover:bg-[#d44032] transition-colors active:scale-95"
                 >
-                  <PhoneDown size={30} fill="currentColor" />
+                  <PhoneOff size={30} fill="currentColor" />
                 </button>
                 <span className="text-gray-300 text-[13px] font-medium mt-1 tracking-wide">{lang === 'ar' ? 'رفض' : 'Decline'}</span>
               </div>

@@ -1,26 +1,13 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>HiSEND</title>
-    <link rel="manifest" href="/manifest.webmanifest" />
-    <meta name="theme-color" content="#00a884" />
-    <link rel="icon" type="image/png" href="/HSEND_LOGO.png" />
-    <link rel="apple-touch-icon" href="/HSEND_LOGO.png" />
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&display=swap" rel="stylesheet">
-    <script src="/clear-cache.js"></script>
-  </head>
-  <body>
-    
+const fs = require('fs');
+let code = fs.readFileSync('index.html', 'utf8');
+
+const splash = `
     <div id="root">
       <style>
         body { margin: 0; background-color: #0b141a; }
         .native-splash { display: flex; flex-direction: column; height: 100vh; width: 100vw; align-items: center; justify-content: space-between; padding: 48px 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         .native-splash-logo { flex: 1; display: flex; align-items: center; justify-content: center; }
-        .native-splash-logo img { width: 96px; height: 96px; object-fit: contain; filter: brightness(2); }
+        .native-splash-logo img { width: 96px; height: 96px; object-fit: contain; }
         .native-splash-footer { display: flex; flex-direction: column; align-items: center; margin-bottom: 24px; }
         .native-splash-footer-from { color: #8696a0; font-size: 14px; margin-bottom: 4px; font-weight: 500; }
         .native-splash-footer-name { color: #fff; font-size: 20px; font-weight: bold; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px; }
@@ -41,7 +28,7 @@
         </div>
       </div>
     </div>
+`;
 
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
+code = code.replace('<div id="root"></div>', splash);
+fs.writeFileSync('index.html', code);
